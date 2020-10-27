@@ -1,0 +1,1406 @@
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 1
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"object.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.section	.text.rt_system_object_init,"ax",%progbits
+  16              		.align	1
+  17              		.global	rt_system_object_init
+  18              		.arch armv7-m
+  19              		.syntax unified
+  20              		.thumb
+  21              		.thumb_func
+  22              		.fpu softvfp
+  24              	rt_system_object_init:
+  25              	.LFB15:
+  26              		.file 1 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c"
+   1:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /*
+   2:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * Copyright (c) 2006-2018, RT-Thread Development Team
+   3:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+   4:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * SPDX-License-Identifier: Apache-2.0
+   5:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+   6:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * Change Logs:
+   7:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * Date           Author       Notes
+   8:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * 2006-03-14     Bernard      the first version
+   9:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * 2006-04-21     Bernard      change the scheduler lock to interrupt lock
+  10:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * 2006-05-18     Bernard      fix the object init bug
+  11:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * 2006-08-03     Bernard      add hook support
+  12:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * 2007-01-28     Bernard      rename RT_OBJECT_Class_Static to RT_Object_Class_Static
+  13:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * 2010-10-26     yi.qiu       add module support in rt_object_allocate and rt_object_free
+  14:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * 2017-12-10     Bernard      Add object_info enum.
+  15:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * 2018-01-25     Bernard      Fix the object find issue when enable MODULE.
+  16:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+  17:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+  18:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #include <rtthread.h>
+  19:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #include <rthw.h>
+  20:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+  21:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MODULE
+  22:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #include <dlmodule.h>
+  23:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  24:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+  25:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /*
+  26:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * define object_info for the number of rt_object_container items.
+  27:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+  28:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** enum rt_object_info_type
+  29:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+  30:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_Thread = 0,                         /**< The object is a thread. */
+  31:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_SEMAPHORE
+  32:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_Semaphore,                          /**< The object is a semaphore. */
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 2
+
+
+  33:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  34:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MUTEX
+  35:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_Mutex,                              /**< The object is a mutex. */
+  36:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  37:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_EVENT
+  38:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_Event,                              /**< The object is a event. */
+  39:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  40:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MAILBOX
+  41:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_MailBox,                            /**< The object is a mail box. */
+  42:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  43:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MESSAGEQUEUE
+  44:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_MessageQueue,                       /**< The object is a message queue. */
+  45:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  46:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MEMHEAP
+  47:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_MemHeap,                            /**< The object is a memory heap */
+  48:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  49:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MEMPOOL
+  50:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_MemPool,                            /**< The object is a memory pool. */
+  51:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  52:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_DEVICE
+  53:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_Device,                             /**< The object is a device */
+  54:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  55:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_Timer,                              /**< The object is a timer. */
+  56:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MODULE
+  57:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_Module,                             /**< The object is a module. */
+  58:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  59:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_Object_Info_Unknown,                            /**< The object is unknown. */
+  60:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** };
+  61:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+  62:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #define _OBJ_CONTAINER_LIST_INIT(c)     \
+  63:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {&(rt_object_container[c].object_list), &(rt_object_container[c].object_list)}
+  64:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** static struct rt_object_information rt_object_container[RT_Object_Info_Unknown] =
+  65:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+  66:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object container - thread */
+  67:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {RT_Object_Class_Thread, _OBJ_CONTAINER_LIST_INIT(RT_Object_Info_Thread), sizeof(struct rt_thre
+  68:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_SEMAPHORE
+  69:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object container - semaphore */
+  70:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {RT_Object_Class_Semaphore, _OBJ_CONTAINER_LIST_INIT(RT_Object_Info_Semaphore), sizeof(struct r
+  71:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  72:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MUTEX
+  73:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object container - mutex */
+  74:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {RT_Object_Class_Mutex, _OBJ_CONTAINER_LIST_INIT(RT_Object_Info_Mutex), sizeof(struct rt_mutex)
+  75:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  76:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_EVENT
+  77:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object container - event */
+  78:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {RT_Object_Class_Event, _OBJ_CONTAINER_LIST_INIT(RT_Object_Info_Event), sizeof(struct rt_event)
+  79:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  80:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MAILBOX
+  81:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object container - mailbox */
+  82:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {RT_Object_Class_MailBox, _OBJ_CONTAINER_LIST_INIT(RT_Object_Info_MailBox), sizeof(struct rt_ma
+  83:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  84:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MESSAGEQUEUE
+  85:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object container - message queue */
+  86:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {RT_Object_Class_MessageQueue, _OBJ_CONTAINER_LIST_INIT(RT_Object_Info_MessageQueue), sizeof(st
+  87:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  88:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MEMHEAP
+  89:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object container - memory heap */
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 3
+
+
+  90:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {RT_Object_Class_MemHeap, _OBJ_CONTAINER_LIST_INIT(RT_Object_Info_MemHeap), sizeof(struct rt_me
+  91:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  92:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MEMPOOL
+  93:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object container - memory pool */
+  94:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {RT_Object_Class_MemPool, _OBJ_CONTAINER_LIST_INIT(RT_Object_Info_MemPool), sizeof(struct rt_me
+  95:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+  96:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_DEVICE
+  97:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object container - device */
+  98:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {RT_Object_Class_Device, _OBJ_CONTAINER_LIST_INIT(RT_Object_Info_Device), sizeof(struct rt_devi
+  99:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+ 100:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object container - timer */
+ 101:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {RT_Object_Class_Timer, _OBJ_CONTAINER_LIST_INIT(RT_Object_Info_Timer), sizeof(struct rt_timer)
+ 102:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MODULE
+ 103:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object container - module */
+ 104:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {RT_Object_Class_Module, _OBJ_CONTAINER_LIST_INIT(RT_Object_Info_Module), sizeof(struct rt_dlmo
+ 105:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+ 106:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** };
+ 107:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 108:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_HOOK
+ 109:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** static void (*rt_object_attach_hook)(struct rt_object *object);
+ 110:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** static void (*rt_object_detach_hook)(struct rt_object *object);
+ 111:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void (*rt_object_trytake_hook)(struct rt_object *object);
+ 112:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void (*rt_object_take_hook)(struct rt_object *object);
+ 113:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void (*rt_object_put_hook)(struct rt_object *object);
+ 114:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 115:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 116:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @addtogroup Hook
+ 117:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 118:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 119:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**@{*/
+ 120:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 121:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 122:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will set a hook function, which will be invoked when object
+ 123:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * attaches to kernel object system.
+ 124:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 125:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param hook the hook function
+ 126:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 127:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void rt_object_attach_sethook(void (*hook)(struct rt_object *object))
+ 128:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ 129:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_object_attach_hook = hook;
+ 130:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 131:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 132:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 133:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will set a hook function, which will be invoked when object
+ 134:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * detaches from kernel object system.
+ 135:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 136:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param hook the hook function
+ 137:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 138:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void rt_object_detach_sethook(void (*hook)(struct rt_object *object))
+ 139:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ 140:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_object_detach_hook = hook;
+ 141:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 142:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 143:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 144:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will set a hook function, which will be invoked when object
+ 145:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * is taken from kernel object system.
+ 146:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 4
+
+
+ 147:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * The object is taken means:
+ 148:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * semaphore - semaphore is taken by thread
+ 149:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * mutex - mutex is taken by thread
+ 150:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * event - event is received by thread
+ 151:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * mailbox - mail is received by thread
+ 152:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * message queue - message is received by thread
+ 153:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 154:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param hook the hook function
+ 155:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 156:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void rt_object_trytake_sethook(void (*hook)(struct rt_object *object))
+ 157:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ 158:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_object_trytake_hook = hook;
+ 159:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 160:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 161:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 162:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will set a hook function, which will be invoked when object
+ 163:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * have been taken from kernel object system.
+ 164:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 165:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * The object have been taken means:
+ 166:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * semaphore - semaphore have been taken by thread
+ 167:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * mutex - mutex have been taken by thread
+ 168:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * event - event have been received by thread
+ 169:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * mailbox - mail have been received by thread
+ 170:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * message queue - message have been received by thread
+ 171:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * timer - timer is started
+ 172:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 173:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param hook the hook function
+ 174:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 175:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void rt_object_take_sethook(void (*hook)(struct rt_object *object))
+ 176:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ 177:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_object_take_hook = hook;
+ 178:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 179:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 180:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 181:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will set a hook function, which will be invoked when object
+ 182:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * is put to kernel object system.
+ 183:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 184:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param hook the hook function
+ 185:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 186:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void rt_object_put_sethook(void (*hook)(struct rt_object *object))
+ 187:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ 188:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_object_put_hook = hook;
+ 189:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 190:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 191:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**@}*/
+ 192:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+ 193:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 194:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 195:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @ingroup SystemInit
+ 196:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 197:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will initialize system object management.
+ 198:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 199:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @deprecated since 0.3.0, this function does not need to be invoked
+ 200:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * in the system initialization.
+ 201:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 202:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void rt_system_object_init(void)
+ 203:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 5
+
+
+  27              		.loc 1 203 1 view -0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+ 204:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+  32              		.loc 1 204 1 view .LVU1
+  33 0000 7047     		bx	lr
+  34              		.cfi_endproc
+  35              	.LFE15:
+  37              		.section	.text.rt_object_get_information,"ax",%progbits
+  38              		.align	1
+  39              		.global	rt_object_get_information
+  40              		.syntax unified
+  41              		.thumb
+  42              		.thumb_func
+  43              		.fpu softvfp
+  45              	rt_object_get_information:
+  46              	.LVL0:
+  47              	.LFB16:
+ 205:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 206:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 207:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @addtogroup KernelObject
+ 208:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 209:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 210:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**@{*/
+ 211:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 212:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 213:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will return the specified type of object information.
+ 214:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 215:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param type the type of object
+ 216:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @return the object type information or RT_NULL
+ 217:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 218:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** struct rt_object_information *
+ 219:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** rt_object_get_information(enum rt_object_class_type type)
+ 220:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+  48              		.loc 1 220 1 view -0
+  49              		.cfi_startproc
+  50              		@ args = 0, pretend = 0, frame = 0
+  51              		@ frame_needed = 0, uses_anonymous_args = 0
+  52              		@ link register save eliminated.
+ 221:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     int index;
+  53              		.loc 1 221 5 view .LVU3
+ 222:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 223:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     for (index = 0; index < RT_Object_Info_Unknown; index ++)
+  54              		.loc 1 223 5 view .LVU4
+  55              		.loc 1 223 16 is_stmt 0 view .LVU5
+  56 0000 0023     		movs	r3, #0
+  57              		.loc 1 223 5 view .LVU6
+  58 0002 00E0     		b	.L3
+  59              	.LVL1:
+  60              	.L4:
+  61              		.loc 1 223 53 is_stmt 1 discriminator 2 view .LVU7
+  62              		.loc 1 223 59 is_stmt 0 discriminator 2 view .LVU8
+  63 0004 0133     		adds	r3, r3, #1
+  64              	.LVL2:
+  65              	.L3:
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 6
+
+
+  66              		.loc 1 223 21 is_stmt 1 discriminator 1 view .LVU9
+  67              		.loc 1 223 5 is_stmt 0 discriminator 1 view .LVU10
+  68 0006 022B     		cmp	r3, #2
+  69 0008 07DC     		bgt	.L7
+ 224:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         if (rt_object_container[index].type == type) return &rt_object_container[index];
+  70              		.loc 1 224 9 is_stmt 1 view .LVU11
+  71              		.loc 1 224 39 is_stmt 0 view .LVU12
+  72 000a 1A01     		lsls	r2, r3, #4
+  73 000c 0449     		ldr	r1, .L8
+  74 000e 8A5C     		ldrb	r2, [r1, r2]	@ zero_extendqisi2
+  75              		.loc 1 224 12 view .LVU13
+  76 0010 8242     		cmp	r2, r0
+  77 0012 F7D1     		bne	.L4
+  78              		.loc 1 224 54 is_stmt 1 discriminator 1 view .LVU14
+  79              		.loc 1 224 61 is_stmt 0 discriminator 1 view .LVU15
+  80 0014 01EB0310 		add	r0, r1, r3, lsl #4
+  81              	.LVL3:
+  82              		.loc 1 224 61 discriminator 1 view .LVU16
+  83 0018 7047     		bx	lr
+  84              	.LVL4:
+  85              	.L7:
+ 225:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 226:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     return RT_NULL;
+  86              		.loc 1 226 12 view .LVU17
+  87 001a 0020     		movs	r0, #0
+  88              	.LVL5:
+ 227:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+  89              		.loc 1 227 1 view .LVU18
+  90 001c 7047     		bx	lr
+  91              	.L9:
+  92 001e 00BF     		.align	2
+  93              	.L8:
+  94 0020 00000000 		.word	.LANCHOR0
+  95              		.cfi_endproc
+  96              	.LFE16:
+  98              		.section	.text.rt_object_init,"ax",%progbits
+  99              		.align	1
+ 100              		.global	rt_object_init
+ 101              		.syntax unified
+ 102              		.thumb
+ 103              		.thumb_func
+ 104              		.fpu softvfp
+ 106              	rt_object_init:
+ 107              	.LVL6:
+ 108              	.LFB17:
+ 228:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** RTM_EXPORT(rt_object_get_information);
+ 229:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 230:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 231:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will initialize an object and add it to object system
+ 232:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * management.
+ 233:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 234:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param object the specified object to be initialized.
+ 235:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param type the object type.
+ 236:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param name the object name. In system, the object's name must be unique.
+ 237:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 238:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void rt_object_init(struct rt_object         *object,
+ 239:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****                     enum rt_object_class_type type,
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 7
+
+
+ 240:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****                     const char               *name)
+ 241:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ 109              		.loc 1 241 1 is_stmt 1 view -0
+ 110              		.cfi_startproc
+ 111              		@ args = 0, pretend = 0, frame = 0
+ 112              		@ frame_needed = 0, uses_anonymous_args = 0
+ 113              		.loc 1 241 1 is_stmt 0 view .LVU20
+ 114 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 115              	.LCFI0:
+ 116              		.cfi_def_cfa_offset 24
+ 117              		.cfi_offset 4, -24
+ 118              		.cfi_offset 5, -20
+ 119              		.cfi_offset 6, -16
+ 120              		.cfi_offset 7, -12
+ 121              		.cfi_offset 8, -8
+ 122              		.cfi_offset 14, -4
+ 123 0004 0646     		mov	r6, r0
+ 124 0006 0F46     		mov	r7, r1
+ 125 0008 9046     		mov	r8, r2
+ 242:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     register rt_base_t temp;
+ 126              		.loc 1 242 5 is_stmt 1 view .LVU21
+ 243:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     struct rt_list_node *node = RT_NULL;
+ 127              		.loc 1 243 5 view .LVU22
+ 128              	.LVL7:
+ 244:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     struct rt_object_information *information;
+ 129              		.loc 1 244 5 view .LVU23
+ 245:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MODULE
+ 246:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     struct rt_dlmodule *module = dlmodule_self();
+ 247:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+ 248:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 249:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* get object information */
+ 250:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     information = rt_object_get_information(type);
+ 130              		.loc 1 250 5 view .LVU24
+ 131              		.loc 1 250 19 is_stmt 0 view .LVU25
+ 132 000a 0846     		mov	r0, r1
+ 133              	.LVL8:
+ 134              		.loc 1 250 19 view .LVU26
+ 135 000c FFF7FEFF 		bl	rt_object_get_information
+ 136              	.LVL9:
+ 137              		.loc 1 250 19 view .LVU27
+ 138 0010 0546     		mov	r5, r0
+ 139              	.LVL10:
+ 251:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_ASSERT(information != RT_NULL);
+ 140              		.loc 1 251 38 is_stmt 1 view .LVU28
+ 252:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 253:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* check object type to avoid re-initialization */
+ 254:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 255:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* enter critical */
+ 256:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_enter_critical();
+ 141              		.loc 1 256 5 view .LVU29
+ 142 0012 FFF7FEFF 		bl	rt_enter_critical
+ 143              	.LVL11:
+ 257:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* try to find object */
+ 258:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     for (node  = information->object_list.next;
+ 144              		.loc 1 258 5 view .LVU30
+ 145              		.loc 1 258 16 is_stmt 0 view .LVU31
+ 146 0016 6B68     		ldr	r3, [r5, #4]
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 8
+
+
+ 147              	.LVL12:
+ 148              	.L11:
+ 259:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node != &(information->object_list);
+ 149              		.loc 1 259 13 is_stmt 1 discriminator 1 view .LVU32
+ 150              		.loc 1 259 21 is_stmt 0 discriminator 1 view .LVU33
+ 151 0018 2C1D     		adds	r4, r5, #4
+ 258:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node != &(information->object_list);
+ 152              		.loc 1 258 5 discriminator 1 view .LVU34
+ 153 001a 9C42     		cmp	r4, r3
+ 154 001c 01D0     		beq	.L14
+ 260:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node  = node->next)
+ 261:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {
+ 262:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         struct rt_object *obj;
+ 155              		.loc 1 262 9 is_stmt 1 view .LVU35
+ 263:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 264:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         obj = rt_list_entry(node, struct rt_object, list);
+ 156              		.loc 1 264 9 view .LVU36
+ 157              	.LVL13:
+ 265:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         RT_ASSERT(obj != object);
+ 158              		.loc 1 265 33 view .LVU37
+ 260:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node  = node->next)
+ 159              		.loc 1 260 13 view .LVU38
+ 260:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node  = node->next)
+ 160              		.loc 1 260 19 is_stmt 0 view .LVU39
+ 161 001e 1B68     		ldr	r3, [r3]
+ 162              	.LVL14:
+ 260:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node  = node->next)
+ 163              		.loc 1 260 19 view .LVU40
+ 164 0020 FAE7     		b	.L11
+ 165              	.L14:
+ 266:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     }
+ 267:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* leave critical */
+ 268:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_exit_critical();
+ 166              		.loc 1 268 5 is_stmt 1 view .LVU41
+ 167 0022 FFF7FEFF 		bl	rt_exit_critical
+ 168              	.LVL15:
+ 269:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 270:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object's parameters */
+ 271:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* set object type to static */
+ 272:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     object->type = type | RT_Object_Class_Static;
+ 169              		.loc 1 272 5 view .LVU42
+ 170              		.loc 1 272 18 is_stmt 0 view .LVU43
+ 171 0026 67F07F07 		orn	r7, r7, #127
+ 172 002a 3772     		strb	r7, [r6, #8]
+ 273:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* copy name */
+ 274:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_strncpy(object->name, name, RT_NAME_MAX);
+ 173              		.loc 1 274 5 is_stmt 1 view .LVU44
+ 174 002c 0822     		movs	r2, #8
+ 175 002e 4146     		mov	r1, r8
+ 176 0030 3046     		mov	r0, r6
+ 177 0032 FFF7FEFF 		bl	rt_strncpy
+ 178              	.LVL16:
+ 275:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 276:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_OBJECT_HOOK_CALL(rt_object_attach_hook, (object));
+ 179              		.loc 1 276 57 view .LVU45
+ 277:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 278:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* lock interrupt */
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 9
+
+
+ 279:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     temp = rt_hw_interrupt_disable();
+ 180              		.loc 1 279 5 view .LVU46
+ 181              		.loc 1 279 12 is_stmt 0 view .LVU47
+ 182 0036 FFF7FEFF 		bl	rt_hw_interrupt_disable
+ 183              	.LVL17:
+ 280:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 281:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MODULE
+ 282:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     if (module)
+ 283:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {
+ 284:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         rt_list_insert_after(&(module->object_list), &(object->list));
+ 285:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         object->module_id = (void *)module;
+ 286:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     }
+ 287:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     else
+ 288:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+ 289:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {
+ 290:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         /* insert object into information object list */
+ 291:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         rt_list_insert_after(&(information->object_list), &(object->list));
+ 184              		.loc 1 291 9 is_stmt 1 view .LVU48
+ 185 003a 06F10C03 		add	r3, r6, #12
+ 186              	.LVL18:
+ 187              	.LBB11:
+ 188              	.LBI11:
+ 189              		.file 2 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h"
+   1:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /*
+   2:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * Copyright (c) 2006-2018, RT-Thread Development Team
+   3:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *
+   4:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * SPDX-License-Identifier: Apache-2.0
+   5:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *
+   6:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * Change Logs:
+   7:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * Date           Author       Notes
+   8:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * 2006-03-16     Bernard      the first version
+   9:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * 2006-09-07     Bernard      move the kservice APIs to rtthread.h
+  10:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * 2007-06-27     Bernard      fix the rt_list_remove bug
+  11:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * 2012-03-22     Bernard      rename kservice.h to rtservice.h
+  12:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * 2017-11-15     JasonJia     Modify rt_slist_foreach to rt_slist_for_each_entry.
+  13:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *                             Make code cleanup.
+  14:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  15:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  16:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #ifndef __RT_SERVICE_H__
+  17:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #define __RT_SERVICE_H__
+  18:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  19:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #ifdef __cplusplus
+  20:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** extern "C" {
+  21:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #endif
+  22:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  23:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  24:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @addtogroup KernelService
+  25:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  26:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  27:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**@{*/
+  28:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  29:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  30:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * rt_container_of - return the member address of ptr, if the type of ptr is the
+  31:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * struct type.
+  32:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  33:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #define rt_container_of(ptr, type, member) \
+  34:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     ((type *)((char *)(ptr) - (unsigned long)(&((type *)0)->member)))
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 10
+
+
+  35:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  36:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  37:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  38:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @brief initialize a list object
+  39:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  40:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #define RT_LIST_OBJECT_INIT(object) { &(object), &(object) }
+  41:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  42:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  43:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @brief initialize a list
+  44:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *
+  45:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param l list to be initialized
+  46:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  47:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** rt_inline void rt_list_init(rt_list_t *l)
+  48:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+  49:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     l->next = l->prev = l;
+  50:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** }
+  51:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  52:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  53:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @brief insert a node after a list
+  54:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *
+  55:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param l list to insert it
+  56:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param n new node to be inserted
+  57:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  58:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** rt_inline void rt_list_insert_after(rt_list_t *l, rt_list_t *n)
+ 190              		.loc 2 58 16 view .LVU49
+ 191              	.LBB12:
+  59:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+  60:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     l->next->prev = n;
+ 192              		.loc 2 60 5 view .LVU50
+ 193              		.loc 2 60 6 is_stmt 0 view .LVU51
+ 194 003e 6A68     		ldr	r2, [r5, #4]
+ 195              		.loc 2 60 19 view .LVU52
+ 196 0040 5360     		str	r3, [r2, #4]
+  61:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->next = l->next;
+ 197              		.loc 2 61 5 is_stmt 1 view .LVU53
+ 198              		.loc 2 61 16 is_stmt 0 view .LVU54
+ 199 0042 6A68     		ldr	r2, [r5, #4]
+ 200              		.loc 2 61 13 view .LVU55
+ 201 0044 F260     		str	r2, [r6, #12]
+  62:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  63:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     l->next = n;
+ 202              		.loc 2 63 5 is_stmt 1 view .LVU56
+ 203              		.loc 2 63 13 is_stmt 0 view .LVU57
+ 204 0046 6B60     		str	r3, [r5, #4]
+  64:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev = l;
+ 205              		.loc 2 64 5 is_stmt 1 view .LVU58
+ 206              		.loc 2 64 13 is_stmt 0 view .LVU59
+ 207 0048 3461     		str	r4, [r6, #16]
+ 208              	.LVL19:
+ 209              		.loc 2 64 13 view .LVU60
+ 210              	.LBE12:
+ 211              	.LBE11:
+ 292:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     }
+ 293:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 294:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* unlock interrupt */
+ 295:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_hw_interrupt_enable(temp);
+ 212              		.loc 1 295 5 is_stmt 1 view .LVU61
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 11
+
+
+ 213 004a FFF7FEFF 		bl	rt_hw_interrupt_enable
+ 214              	.LVL20:
+ 296:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 215              		.loc 1 296 1 is_stmt 0 view .LVU62
+ 216 004e BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 217              		.loc 1 296 1 view .LVU63
+ 218              		.cfi_endproc
+ 219              	.LFE17:
+ 221              		.section	.text.rt_object_detach,"ax",%progbits
+ 222              		.align	1
+ 223              		.global	rt_object_detach
+ 224              		.syntax unified
+ 225              		.thumb
+ 226              		.thumb_func
+ 227              		.fpu softvfp
+ 229              	rt_object_detach:
+ 230              	.LVL21:
+ 231              	.LFB18:
+ 297:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 298:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 299:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will detach a static object from object system,
+ 300:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * and the memory of static object is not freed.
+ 301:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 302:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param object the specified object to be detached.
+ 303:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 304:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void rt_object_detach(rt_object_t object)
+ 305:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ 232              		.loc 1 305 1 is_stmt 1 view -0
+ 233              		.cfi_startproc
+ 234              		@ args = 0, pretend = 0, frame = 0
+ 235              		@ frame_needed = 0, uses_anonymous_args = 0
+ 236              		.loc 1 305 1 is_stmt 0 view .LVU65
+ 237 0000 10B5     		push	{r4, lr}
+ 238              	.LCFI1:
+ 239              		.cfi_def_cfa_offset 8
+ 240              		.cfi_offset 4, -8
+ 241              		.cfi_offset 14, -4
+ 242 0002 0446     		mov	r4, r0
+ 306:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     register rt_base_t temp;
+ 243              		.loc 1 306 5 is_stmt 1 view .LVU66
+ 307:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 308:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* object check */
+ 309:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_ASSERT(object != RT_NULL);
+ 244              		.loc 1 309 33 view .LVU67
+ 310:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 311:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_OBJECT_HOOK_CALL(rt_object_detach_hook, (object));
+ 245              		.loc 1 311 57 view .LVU68
+ 312:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 313:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* reset object type */
+ 314:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     object->type = 0;
+ 246              		.loc 1 314 5 view .LVU69
+ 247              		.loc 1 314 18 is_stmt 0 view .LVU70
+ 248 0004 0023     		movs	r3, #0
+ 249 0006 0372     		strb	r3, [r0, #8]
+ 315:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 316:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* lock interrupt */
+ 317:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     temp = rt_hw_interrupt_disable();
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 12
+
+
+ 250              		.loc 1 317 5 is_stmt 1 view .LVU71
+ 251              		.loc 1 317 12 is_stmt 0 view .LVU72
+ 252 0008 FFF7FEFF 		bl	rt_hw_interrupt_disable
+ 253              	.LVL22:
+ 318:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 319:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* remove from old list */
+ 320:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_list_remove(&(object->list));
+ 254              		.loc 1 320 5 is_stmt 1 view .LVU73
+ 255 000c 04F10C03 		add	r3, r4, #12
+ 256              	.LVL23:
+ 257              	.LBB13:
+ 258              	.LBI13:
+  65:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** }
+  66:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  67:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  68:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @brief insert a node before a list
+  69:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *
+  70:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param n new node to be inserted
+  71:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param l list to insert it
+  72:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  73:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** rt_inline void rt_list_insert_before(rt_list_t *l, rt_list_t *n)
+  74:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+  75:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     l->prev->next = n;
+  76:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev = l->prev;
+  77:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  78:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     l->prev = n;
+  79:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->next = l;
+  80:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** }
+  81:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  82:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  83:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @brief remove node from list.
+  84:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param n the node to remove from the list.
+  85:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  86:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** rt_inline void rt_list_remove(rt_list_t *n)
+ 259              		.loc 2 86 16 view .LVU74
+ 260              	.LBB14:
+  87:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+  88:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->next->prev = n->prev;
+ 261              		.loc 2 88 5 view .LVU75
+ 262              		.loc 2 88 6 is_stmt 0 view .LVU76
+ 263 0010 E168     		ldr	r1, [r4, #12]
+ 264              		.loc 2 88 22 view .LVU77
+ 265 0012 2269     		ldr	r2, [r4, #16]
+ 266              		.loc 2 88 19 view .LVU78
+ 267 0014 4A60     		str	r2, [r1, #4]
+  89:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev->next = n->next;
+ 268              		.loc 2 89 5 is_stmt 1 view .LVU79
+ 269              		.loc 2 89 22 is_stmt 0 view .LVU80
+ 270 0016 E168     		ldr	r1, [r4, #12]
+ 271              		.loc 2 89 19 view .LVU81
+ 272 0018 1160     		str	r1, [r2]
+  90:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  91:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->next = n->prev = n;
+ 273              		.loc 2 91 5 is_stmt 1 view .LVU82
+ 274              		.loc 2 91 23 is_stmt 0 view .LVU83
+ 275 001a 2361     		str	r3, [r4, #16]
+ 276              		.loc 2 91 13 view .LVU84
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 13
+
+
+ 277 001c E360     		str	r3, [r4, #12]
+ 278              	.LVL24:
+ 279              		.loc 2 91 13 view .LVU85
+ 280              	.LBE14:
+ 281              	.LBE13:
+ 321:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 322:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* unlock interrupt */
+ 323:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_hw_interrupt_enable(temp);
+ 282              		.loc 1 323 5 is_stmt 1 view .LVU86
+ 283 001e FFF7FEFF 		bl	rt_hw_interrupt_enable
+ 284              	.LVL25:
+ 324:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 285              		.loc 1 324 1 is_stmt 0 view .LVU87
+ 286 0022 10BD     		pop	{r4, pc}
+ 287              		.loc 1 324 1 view .LVU88
+ 288              		.cfi_endproc
+ 289              	.LFE18:
+ 291              		.section	.text.rt_object_allocate,"ax",%progbits
+ 292              		.align	1
+ 293              		.global	rt_object_allocate
+ 294              		.syntax unified
+ 295              		.thumb
+ 296              		.thumb_func
+ 297              		.fpu softvfp
+ 299              	rt_object_allocate:
+ 300              	.LVL26:
+ 301              	.LFB19:
+ 325:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 326:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_HEAP
+ 327:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 328:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will allocate an object from object system
+ 329:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 330:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param type the type of object
+ 331:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param name the object name. In system, the object's name must be unique.
+ 332:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 333:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @return object
+ 334:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 335:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** rt_object_t rt_object_allocate(enum rt_object_class_type type, const char *name)
+ 336:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ 302              		.loc 1 336 1 is_stmt 1 view -0
+ 303              		.cfi_startproc
+ 304              		@ args = 0, pretend = 0, frame = 0
+ 305              		@ frame_needed = 0, uses_anonymous_args = 0
+ 306              		.loc 1 336 1 is_stmt 0 view .LVU90
+ 307 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 308              	.LCFI2:
+ 309              		.cfi_def_cfa_offset 24
+ 310              		.cfi_offset 3, -24
+ 311              		.cfi_offset 4, -20
+ 312              		.cfi_offset 5, -16
+ 313              		.cfi_offset 6, -12
+ 314              		.cfi_offset 7, -8
+ 315              		.cfi_offset 14, -4
+ 316 0002 0746     		mov	r7, r0
+ 317 0004 0E46     		mov	r6, r1
+ 337:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     struct rt_object *object;
+ 318              		.loc 1 337 5 is_stmt 1 view .LVU91
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 14
+
+
+ 338:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     register rt_base_t temp;
+ 319              		.loc 1 338 5 view .LVU92
+ 339:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     struct rt_object_information *information;
+ 320              		.loc 1 339 5 view .LVU93
+ 340:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MODULE
+ 341:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     struct rt_dlmodule *module = dlmodule_self();
+ 342:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+ 343:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 344:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_DEBUG_NOT_IN_INTERRUPT;
+ 321              		.loc 1 344 30 view .LVU94
+ 345:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 346:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* get object information */
+ 347:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     information = rt_object_get_information(type);
+ 322              		.loc 1 347 5 view .LVU95
+ 323              		.loc 1 347 19 is_stmt 0 view .LVU96
+ 324 0006 FFF7FEFF 		bl	rt_object_get_information
+ 325              	.LVL27:
+ 326              		.loc 1 347 19 view .LVU97
+ 327 000a 0446     		mov	r4, r0
+ 328              	.LVL28:
+ 348:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_ASSERT(information != RT_NULL);
+ 329              		.loc 1 348 38 is_stmt 1 view .LVU98
+ 349:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 350:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     object = (struct rt_object *)RT_KERNEL_MALLOC(information->object_size);
+ 330              		.loc 1 350 5 view .LVU99
+ 331              		.loc 1 350 34 is_stmt 0 view .LVU100
+ 332 000c C068     		ldr	r0, [r0, #12]
+ 333              	.LVL29:
+ 334              		.loc 1 350 34 view .LVU101
+ 335 000e FFF7FEFF 		bl	rt_malloc
+ 336              	.LVL30:
+ 351:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     if (object == RT_NULL)
+ 337              		.loc 1 351 5 is_stmt 1 view .LVU102
+ 338              		.loc 1 351 8 is_stmt 0 view .LVU103
+ 339 0012 0546     		mov	r5, r0
+ 340 0014 C0B1     		cbz	r0, .L17
+ 352:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {
+ 353:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         /* no memory can be allocated */
+ 354:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         return RT_NULL;
+ 355:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     }
+ 356:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 357:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* clean memory data of object */
+ 358:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_memset(object, 0x0, information->object_size);
+ 341              		.loc 1 358 5 is_stmt 1 view .LVU104
+ 342 0016 E268     		ldr	r2, [r4, #12]
+ 343 0018 0021     		movs	r1, #0
+ 344 001a FFF7FEFF 		bl	rt_memset
+ 345              	.LVL31:
+ 359:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 360:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* initialize object's parameters */
+ 361:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 362:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* set object type */
+ 363:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     object->type = type;
+ 346              		.loc 1 363 5 view .LVU105
+ 347              		.loc 1 363 18 is_stmt 0 view .LVU106
+ 348 001e 2F72     		strb	r7, [r5, #8]
+ 364:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 15
+
+
+ 365:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* set object flag */
+ 366:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     object->flag = 0;
+ 349              		.loc 1 366 5 is_stmt 1 view .LVU107
+ 350              		.loc 1 366 18 is_stmt 0 view .LVU108
+ 351 0020 0023     		movs	r3, #0
+ 352 0022 6B72     		strb	r3, [r5, #9]
+ 367:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 368:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* copy name */
+ 369:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_strncpy(object->name, name, RT_NAME_MAX);
+ 353              		.loc 1 369 5 is_stmt 1 view .LVU109
+ 354 0024 0822     		movs	r2, #8
+ 355 0026 3146     		mov	r1, r6
+ 356 0028 2846     		mov	r0, r5
+ 357 002a FFF7FEFF 		bl	rt_strncpy
+ 358              	.LVL32:
+ 370:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 371:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_OBJECT_HOOK_CALL(rt_object_attach_hook, (object));
+ 359              		.loc 1 371 57 view .LVU110
+ 372:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 373:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* lock interrupt */
+ 374:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     temp = rt_hw_interrupt_disable();
+ 360              		.loc 1 374 5 view .LVU111
+ 361              		.loc 1 374 12 is_stmt 0 view .LVU112
+ 362 002e FFF7FEFF 		bl	rt_hw_interrupt_disable
+ 363              	.LVL33:
+ 375:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 376:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #ifdef RT_USING_MODULE
+ 377:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     if (module)
+ 378:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {
+ 379:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         rt_list_insert_after(&(module->object_list), &(object->list));
+ 380:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         object->module_id = (void *)module;
+ 381:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     }
+ 382:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     else
+ 383:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+ 384:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {
+ 385:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         /* insert object into information object list */
+ 386:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         rt_list_insert_after(&(information->object_list), &(object->list));
+ 364              		.loc 1 386 9 is_stmt 1 view .LVU113
+ 365 0032 221D     		adds	r2, r4, #4
+ 366 0034 05F10C03 		add	r3, r5, #12
+ 367              	.LVL34:
+ 368              	.LBB15:
+ 369              	.LBI15:
+  58:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+ 370              		.loc 2 58 16 view .LVU114
+ 371              	.LBB16:
+  60:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->next = l->next;
+ 372              		.loc 2 60 5 view .LVU115
+  60:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->next = l->next;
+ 373              		.loc 2 60 6 is_stmt 0 view .LVU116
+ 374 0038 6168     		ldr	r1, [r4, #4]
+  60:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->next = l->next;
+ 375              		.loc 2 60 19 view .LVU117
+ 376 003a 4B60     		str	r3, [r1, #4]
+  61:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+ 377              		.loc 2 61 5 is_stmt 1 view .LVU118
+  61:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 16
+
+
+ 378              		.loc 2 61 16 is_stmt 0 view .LVU119
+ 379 003c 6168     		ldr	r1, [r4, #4]
+  61:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+ 380              		.loc 2 61 13 view .LVU120
+ 381 003e E960     		str	r1, [r5, #12]
+  63:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev = l;
+ 382              		.loc 2 63 5 is_stmt 1 view .LVU121
+  63:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev = l;
+ 383              		.loc 2 63 13 is_stmt 0 view .LVU122
+ 384 0040 6360     		str	r3, [r4, #4]
+  64:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** }
+ 385              		.loc 2 64 5 is_stmt 1 view .LVU123
+  64:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** }
+ 386              		.loc 2 64 13 is_stmt 0 view .LVU124
+ 387 0042 2A61     		str	r2, [r5, #16]
+ 388              	.LVL35:
+  64:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** }
+ 389              		.loc 2 64 13 view .LVU125
+ 390              	.LBE16:
+ 391              	.LBE15:
+ 387:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     }
+ 388:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 389:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* unlock interrupt */
+ 390:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_hw_interrupt_enable(temp);
+ 392              		.loc 1 390 5 is_stmt 1 view .LVU126
+ 393 0044 FFF7FEFF 		bl	rt_hw_interrupt_enable
+ 394              	.LVL36:
+ 391:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 392:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* return object */
+ 393:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     return object;
+ 395              		.loc 1 393 5 view .LVU127
+ 396              	.L17:
+ 394:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 397              		.loc 1 394 1 is_stmt 0 view .LVU128
+ 398 0048 2846     		mov	r0, r5
+ 399 004a F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 400              		.loc 1 394 1 view .LVU129
+ 401              		.cfi_endproc
+ 402              	.LFE19:
+ 404              		.section	.text.rt_object_delete,"ax",%progbits
+ 405              		.align	1
+ 406              		.global	rt_object_delete
+ 407              		.syntax unified
+ 408              		.thumb
+ 409              		.thumb_func
+ 410              		.fpu softvfp
+ 412              	rt_object_delete:
+ 413              	.LVL37:
+ 414              	.LFB20:
+ 395:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 396:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 397:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will delete an object and release object memory.
+ 398:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 399:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param object the specified object to be deleted.
+ 400:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 401:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** void rt_object_delete(rt_object_t object)
+ 402:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 17
+
+
+ 415              		.loc 1 402 1 is_stmt 1 view -0
+ 416              		.cfi_startproc
+ 417              		@ args = 0, pretend = 0, frame = 0
+ 418              		@ frame_needed = 0, uses_anonymous_args = 0
+ 419              		.loc 1 402 1 is_stmt 0 view .LVU131
+ 420 0000 10B5     		push	{r4, lr}
+ 421              	.LCFI3:
+ 422              		.cfi_def_cfa_offset 8
+ 423              		.cfi_offset 4, -8
+ 424              		.cfi_offset 14, -4
+ 425 0002 0446     		mov	r4, r0
+ 403:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     register rt_base_t temp;
+ 426              		.loc 1 403 5 is_stmt 1 view .LVU132
+ 404:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 405:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* object check */
+ 406:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_ASSERT(object != RT_NULL);
+ 427              		.loc 1 406 33 view .LVU133
+ 407:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_ASSERT(!(object->type & RT_Object_Class_Static));
+ 428              		.loc 1 407 56 view .LVU134
+ 408:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 409:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_OBJECT_HOOK_CALL(rt_object_detach_hook, (object));
+ 429              		.loc 1 409 57 view .LVU135
+ 410:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 411:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* reset object type */
+ 412:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     object->type = 0;
+ 430              		.loc 1 412 5 view .LVU136
+ 431              		.loc 1 412 18 is_stmt 0 view .LVU137
+ 432 0004 0023     		movs	r3, #0
+ 433 0006 0372     		strb	r3, [r0, #8]
+ 413:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 414:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* lock interrupt */
+ 415:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     temp = rt_hw_interrupt_disable();
+ 434              		.loc 1 415 5 is_stmt 1 view .LVU138
+ 435              		.loc 1 415 12 is_stmt 0 view .LVU139
+ 436 0008 FFF7FEFF 		bl	rt_hw_interrupt_disable
+ 437              	.LVL38:
+ 416:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 417:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* remove from old list */
+ 418:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_list_remove(&(object->list));
+ 438              		.loc 1 418 5 is_stmt 1 view .LVU140
+ 439 000c 04F10C03 		add	r3, r4, #12
+ 440              	.LVL39:
+ 441              	.LBB17:
+ 442              	.LBI17:
+  86:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+ 443              		.loc 2 86 16 view .LVU141
+ 444              	.LBB18:
+  88:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev->next = n->next;
+ 445              		.loc 2 88 5 view .LVU142
+  88:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev->next = n->next;
+ 446              		.loc 2 88 6 is_stmt 0 view .LVU143
+ 447 0010 E168     		ldr	r1, [r4, #12]
+  88:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev->next = n->next;
+ 448              		.loc 2 88 22 view .LVU144
+ 449 0012 2269     		ldr	r2, [r4, #16]
+  88:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev->next = n->next;
+ 450              		.loc 2 88 19 view .LVU145
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 18
+
+
+ 451 0014 4A60     		str	r2, [r1, #4]
+  89:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+ 452              		.loc 2 89 5 is_stmt 1 view .LVU146
+  89:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+ 453              		.loc 2 89 22 is_stmt 0 view .LVU147
+ 454 0016 E168     		ldr	r1, [r4, #12]
+  89:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+ 455              		.loc 2 89 19 view .LVU148
+ 456 0018 1160     		str	r1, [r2]
+ 457              		.loc 2 91 5 is_stmt 1 view .LVU149
+ 458              		.loc 2 91 23 is_stmt 0 view .LVU150
+ 459 001a 2361     		str	r3, [r4, #16]
+ 460              		.loc 2 91 13 view .LVU151
+ 461 001c E360     		str	r3, [r4, #12]
+ 462              	.LVL40:
+ 463              		.loc 2 91 13 view .LVU152
+ 464              	.LBE18:
+ 465              	.LBE17:
+ 419:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 420:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* unlock interrupt */
+ 421:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_hw_interrupt_enable(temp);
+ 466              		.loc 1 421 5 is_stmt 1 view .LVU153
+ 467 001e FFF7FEFF 		bl	rt_hw_interrupt_enable
+ 468              	.LVL41:
+ 422:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 423:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* free the memory of object */
+ 424:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_KERNEL_FREE(object);
+ 469              		.loc 1 424 5 view .LVU154
+ 470 0022 2046     		mov	r0, r4
+ 471 0024 FFF7FEFF 		bl	rt_free
+ 472              	.LVL42:
+ 425:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 473              		.loc 1 425 1 is_stmt 0 view .LVU155
+ 474 0028 10BD     		pop	{r4, pc}
+ 475              		.loc 1 425 1 view .LVU156
+ 476              		.cfi_endproc
+ 477              	.LFE20:
+ 479              		.section	.text.rt_object_is_systemobject,"ax",%progbits
+ 480              		.align	1
+ 481              		.global	rt_object_is_systemobject
+ 482              		.syntax unified
+ 483              		.thumb
+ 484              		.thumb_func
+ 485              		.fpu softvfp
+ 487              	rt_object_is_systemobject:
+ 488              	.LVL43:
+ 489              	.LFB21:
+ 426:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** #endif
+ 427:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 428:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 429:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will judge the object is system object or not.
+ 430:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * Normally, the system object is a static object and the type
+ 431:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * of object set to RT_Object_Class_Static.
+ 432:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 433:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param object the specified object to be judged.
+ 434:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 435:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @return RT_TRUE if a system object, RT_FALSE for others.
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 19
+
+
+ 436:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 437:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** rt_bool_t rt_object_is_systemobject(rt_object_t object)
+ 438:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ 490              		.loc 1 438 1 is_stmt 1 view -0
+ 491              		.cfi_startproc
+ 492              		@ args = 0, pretend = 0, frame = 0
+ 493              		@ frame_needed = 0, uses_anonymous_args = 0
+ 494              		@ link register save eliminated.
+ 439:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* object check */
+ 440:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_ASSERT(object != RT_NULL);
+ 495              		.loc 1 440 33 view .LVU158
+ 441:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 442:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     if (object->type & RT_Object_Class_Static)
+ 496              		.loc 1 442 5 view .LVU159
+ 497              		.loc 1 442 9 is_stmt 0 view .LVU160
+ 498 0000 90F90830 		ldrsb	r3, [r0, #8]
+ 499              		.loc 1 442 8 view .LVU161
+ 500 0004 002B     		cmp	r3, #0
+ 501 0006 01DB     		blt	.L24
+ 443:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         return RT_TRUE;
+ 444:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 445:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     return RT_FALSE;
+ 502              		.loc 1 445 12 view .LVU162
+ 503 0008 0020     		movs	r0, #0
+ 504              	.LVL44:
+ 505              		.loc 1 445 12 view .LVU163
+ 506 000a 7047     		bx	lr
+ 507              	.LVL45:
+ 508              	.L24:
+ 443:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         return RT_TRUE;
+ 509              		.loc 1 443 16 view .LVU164
+ 510 000c 0120     		movs	r0, #1
+ 511              	.LVL46:
+ 446:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 512              		.loc 1 446 1 view .LVU165
+ 513 000e 7047     		bx	lr
+ 514              		.cfi_endproc
+ 515              	.LFE21:
+ 517              		.section	.text.rt_object_get_type,"ax",%progbits
+ 518              		.align	1
+ 519              		.global	rt_object_get_type
+ 520              		.syntax unified
+ 521              		.thumb
+ 522              		.thumb_func
+ 523              		.fpu softvfp
+ 525              	rt_object_get_type:
+ 526              	.LVL47:
+ 527              	.LFB22:
+ 447:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 448:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 449:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will return the type of object without
+ 450:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * RT_Object_Class_Static flag.
+ 451:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 452:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param object the specified object to be get type.
+ 453:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 454:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @return the type of object.
+ 455:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 20
+
+
+ 456:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** rt_uint8_t rt_object_get_type(rt_object_t object)
+ 457:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ 528              		.loc 1 457 1 is_stmt 1 view -0
+ 529              		.cfi_startproc
+ 530              		@ args = 0, pretend = 0, frame = 0
+ 531              		@ frame_needed = 0, uses_anonymous_args = 0
+ 532              		@ link register save eliminated.
+ 458:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* object check */
+ 459:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_ASSERT(object != RT_NULL);
+ 533              		.loc 1 459 33 view .LVU167
+ 460:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 461:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     return object->type & ~RT_Object_Class_Static;
+ 534              		.loc 1 461 5 view .LVU168
+ 535              		.loc 1 461 18 is_stmt 0 view .LVU169
+ 536 0000 007A     		ldrb	r0, [r0, #8]	@ zero_extendqisi2
+ 537              	.LVL48:
+ 462:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 538              		.loc 1 462 1 view .LVU170
+ 539 0002 00F07F00 		and	r0, r0, #127
+ 540 0006 7047     		bx	lr
+ 541              		.cfi_endproc
+ 542              	.LFE22:
+ 544              		.section	.text.rt_object_find,"ax",%progbits
+ 545              		.align	1
+ 546              		.global	rt_object_find
+ 547              		.syntax unified
+ 548              		.thumb
+ 549              		.thumb_func
+ 550              		.fpu softvfp
+ 552              	rt_object_find:
+ 553              	.LVL49:
+ 554              	.LFB23:
+ 463:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 464:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** /**
+ 465:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * This function will find specified name object from object
+ 466:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * container.
+ 467:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 468:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param name the specified name of object.
+ 469:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @param type the type of object
+ 470:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 471:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @return the found object or RT_NULL if there is no this object
+ 472:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * in object container.
+ 473:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  *
+ 474:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  * @note this function shall not be invoked in interrupt status.
+ 475:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****  */
+ 476:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** rt_object_t rt_object_find(const char *name, rt_uint8_t type)
+ 477:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** {
+ 555              		.loc 1 477 1 is_stmt 1 view -0
+ 556              		.cfi_startproc
+ 557              		@ args = 0, pretend = 0, frame = 0
+ 558              		@ frame_needed = 0, uses_anonymous_args = 0
+ 559              		.loc 1 477 1 is_stmt 0 view .LVU172
+ 560 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 561              	.LCFI4:
+ 562              		.cfi_def_cfa_offset 24
+ 563              		.cfi_offset 3, -24
+ 564              		.cfi_offset 4, -20
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 21
+
+
+ 565              		.cfi_offset 5, -16
+ 566              		.cfi_offset 6, -12
+ 567              		.cfi_offset 7, -8
+ 568              		.cfi_offset 14, -4
+ 478:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     struct rt_object *object = RT_NULL;
+ 569              		.loc 1 478 5 is_stmt 1 view .LVU173
+ 570              	.LVL50:
+ 479:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     struct rt_list_node *node = RT_NULL;
+ 571              		.loc 1 479 5 view .LVU174
+ 480:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     struct rt_object_information *information = RT_NULL;
+ 572              		.loc 1 480 5 view .LVU175
+ 481:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 482:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* parameter check */
+ 483:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     if ((name == RT_NULL) || (type > RT_Object_Class_Unknown))
+ 573              		.loc 1 483 5 view .LVU176
+ 574              		.loc 1 483 8 is_stmt 0 view .LVU177
+ 575 0002 0746     		mov	r7, r0
+ 576 0004 F0B1     		cbz	r0, .L31
+ 577 0006 0C46     		mov	r4, r1
+ 578              		.loc 1 483 27 discriminator 1 view .LVU178
+ 579 0008 0C29     		cmp	r1, #12
+ 580 000a 1DD8     		bhi	.L32
+ 484:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         return RT_NULL;
+ 485:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 486:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* which is invoke in interrupt status */
+ 487:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     RT_DEBUG_NOT_IN_INTERRUPT;
+ 581              		.loc 1 487 30 is_stmt 1 view .LVU179
+ 488:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 489:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* enter critical */
+ 490:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_enter_critical();
+ 582              		.loc 1 490 5 view .LVU180
+ 583 000c FFF7FEFF 		bl	rt_enter_critical
+ 584              	.LVL51:
+ 491:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 492:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* try to find object */
+ 493:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     if (information == RT_NULL)
+ 585              		.loc 1 493 5 view .LVU181
+ 494:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {
+ 495:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         information = rt_object_get_information((enum rt_object_class_type)type);
+ 586              		.loc 1 495 9 view .LVU182
+ 587              		.loc 1 495 23 is_stmt 0 view .LVU183
+ 588 0010 2046     		mov	r0, r4
+ 589 0012 FFF7FEFF 		bl	rt_object_get_information
+ 590              	.LVL52:
+ 591 0016 0646     		mov	r6, r0
+ 592              	.LVL53:
+ 496:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         RT_ASSERT(information != RT_NULL);
+ 593              		.loc 1 496 42 is_stmt 1 view .LVU184
+ 497:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     }
+ 498:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     for (node  = information->object_list.next;
+ 594              		.loc 1 498 5 view .LVU185
+ 595              		.loc 1 498 16 is_stmt 0 view .LVU186
+ 596 0018 4468     		ldr	r4, [r0, #4]
+ 597              	.LVL54:
+ 598              	.L28:
+ 499:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node != &(information->object_list);
+ 599              		.loc 1 499 13 is_stmt 1 discriminator 1 view .LVU187
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 22
+
+
+ 600              		.loc 1 499 21 is_stmt 0 discriminator 1 view .LVU188
+ 601 001a 331D     		adds	r3, r6, #4
+ 498:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node != &(information->object_list);
+ 602              		.loc 1 498 5 discriminator 1 view .LVU189
+ 603 001c A342     		cmp	r3, r4
+ 604 001e 0CD0     		beq	.L34
+ 500:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node  = node->next)
+ 501:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     {
+ 502:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         object = rt_list_entry(node, struct rt_object, list);
+ 605              		.loc 1 502 9 is_stmt 1 view .LVU190
+ 606              		.loc 1 502 16 is_stmt 0 view .LVU191
+ 607 0020 A4F10C05 		sub	r5, r4, #12
+ 608              	.LVL55:
+ 503:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         if (rt_strncmp(object->name, name, RT_NAME_MAX) == 0)
+ 609              		.loc 1 503 9 is_stmt 1 view .LVU192
+ 610              		.loc 1 503 13 is_stmt 0 view .LVU193
+ 611 0024 0822     		movs	r2, #8
+ 612 0026 3946     		mov	r1, r7
+ 613 0028 2846     		mov	r0, r5
+ 614 002a FFF7FEFF 		bl	rt_strncmp
+ 615              	.LVL56:
+ 616              		.loc 1 503 12 view .LVU194
+ 617 002e 08B1     		cbz	r0, .L35
+ 500:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node  = node->next)
+ 618              		.loc 1 500 13 is_stmt 1 view .LVU195
+ 500:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node  = node->next)
+ 619              		.loc 1 500 19 is_stmt 0 view .LVU196
+ 620 0030 2468     		ldr	r4, [r4]
+ 621              	.LVL57:
+ 500:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             node  = node->next)
+ 622              		.loc 1 500 19 view .LVU197
+ 623 0032 F2E7     		b	.L28
+ 624              	.L35:
+ 504:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         {
+ 505:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             /* leave critical */
+ 506:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             rt_exit_critical();
+ 625              		.loc 1 506 13 is_stmt 1 view .LVU198
+ 626 0034 FFF7FEFF 		bl	rt_exit_critical
+ 627              	.LVL58:
+ 507:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 508:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****             return object;
+ 628              		.loc 1 508 13 view .LVU199
+ 629              		.loc 1 508 20 is_stmt 0 view .LVU200
+ 630 0038 02E0     		b	.L26
+ 631              	.LVL59:
+ 632              	.L34:
+ 509:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****         }
+ 510:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     }
+ 511:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 512:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     /* leave critical */
+ 513:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     rt_exit_critical();
+ 633              		.loc 1 513 5 is_stmt 1 view .LVU201
+ 634 003a FFF7FEFF 		bl	rt_exit_critical
+ 635              	.LVL60:
+ 514:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 515:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c ****     return RT_NULL;
+ 636              		.loc 1 515 5 view .LVU202
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 23
+
+
+ 637              		.loc 1 515 12 is_stmt 0 view .LVU203
+ 638 003e 0025     		movs	r5, #0
+ 639              	.LVL61:
+ 640              	.L26:
+ 516:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** }
+ 641              		.loc 1 516 1 view .LVU204
+ 642 0040 2846     		mov	r0, r5
+ 643 0042 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 644              	.LVL62:
+ 645              	.L31:
+ 484:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 646              		.loc 1 484 16 view .LVU205
+ 647 0044 0546     		mov	r5, r0
+ 648 0046 FBE7     		b	.L26
+ 649              	.L32:
+ 484:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/object.c **** 
+ 650              		.loc 1 484 16 view .LVU206
+ 651 0048 0025     		movs	r5, #0
+ 652 004a F9E7     		b	.L26
+ 653              		.cfi_endproc
+ 654              	.LFE23:
+ 656              		.section	.data.rt_object_container,"aw"
+ 657              		.align	2
+ 658              		.set	.LANCHOR0,. + 0
+ 661              	rt_object_container:
+ 662 0000 01       		.byte	1
+ 663 0001 000000   		.space	3
+ 664 0004 04000000 		.word	rt_object_container+4
+ 665 0008 04000000 		.word	rt_object_container+4
+ 666 000c 78000000 		.word	120
+ 667 0010 02       		.byte	2
+ 668 0011 000000   		.space	3
+ 669 0014 14000000 		.word	rt_object_container+20
+ 670 0018 14000000 		.word	rt_object_container+20
+ 671 001c 20000000 		.word	32
+ 672 0020 0A       		.byte	10
+ 673 0021 000000   		.space	3
+ 674 0024 24000000 		.word	rt_object_container+36
+ 675 0028 24000000 		.word	rt_object_container+36
+ 676 002c 2C000000 		.word	44
+ 677              		.text
+ 678              	.Letext0:
+ 679              		.file 3 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtdef.h"
+ 680              		.file 4 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/finsh_api.h"
+ 681              		.file 5 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtthread.h"
+ 682              		.file 6 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rthw.h"
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s 			page 24
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 object.c
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:16     .text.rt_system_object_init:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:24     .text.rt_system_object_init:00000000 rt_system_object_init
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:38     .text.rt_object_get_information:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:45     .text.rt_object_get_information:00000000 rt_object_get_information
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:94     .text.rt_object_get_information:00000020 $d
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:99     .text.rt_object_init:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:106    .text.rt_object_init:00000000 rt_object_init
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:222    .text.rt_object_detach:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:229    .text.rt_object_detach:00000000 rt_object_detach
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:292    .text.rt_object_allocate:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:299    .text.rt_object_allocate:00000000 rt_object_allocate
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:405    .text.rt_object_delete:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:412    .text.rt_object_delete:00000000 rt_object_delete
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:480    .text.rt_object_is_systemobject:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:487    .text.rt_object_is_systemobject:00000000 rt_object_is_systemobject
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:518    .text.rt_object_get_type:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:525    .text.rt_object_get_type:00000000 rt_object_get_type
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:545    .text.rt_object_find:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:552    .text.rt_object_find:00000000 rt_object_find
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:657    .data.rt_object_container:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\ccWxQTZK.s:661    .data.rt_object_container:00000000 rt_object_container
+
+UNDEFINED SYMBOLS
+rt_enter_critical
+rt_exit_critical
+rt_strncpy
+rt_hw_interrupt_disable
+rt_hw_interrupt_enable
+rt_malloc
+rt_memset
+rt_free
+rt_strncmp

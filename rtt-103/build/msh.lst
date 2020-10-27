@@ -1,0 +1,2193 @@
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 1
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"msh.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.section	.text.str_common,"ax",%progbits
+  16              		.align	1
+  17              		.arch armv7-m
+  18              		.syntax unified
+  19              		.thumb
+  20              		.thumb_func
+  21              		.fpu softvfp
+  23              	str_common:
+  24              	.LVL0:
+  25              	.LFB26:
+  26              		.file 1 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c"
+   1:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** /*
+   2:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****  * Copyright (c) 2006-2018, RT-Thread Development Team
+   3:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****  *
+   4:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****  * SPDX-License-Identifier: Apache-2.0
+   5:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****  *
+   6:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****  * Change Logs:
+   7:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****  * Date           Author       Notes
+   8:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****  * 2013-03-30     Bernard      the first verion for finsh
+   9:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****  * 2014-01-03     Bernard      msh can execute module.
+  10:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****  * 2017-07-19     Aubr.Cool    limit argc to RT_FINSH_ARG_MAX
+  11:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****  */
+  12:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #include <rtthread.h>
+  13:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  14:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef FINSH_USING_MSH
+  15:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  16:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #include "msh.h"
+  17:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #include <finsh.h>
+  18:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #include <shell.h>
+  19:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  20:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef RT_USING_DFS
+  21:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #include <dfs_posix.h>
+  22:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+  23:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  24:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef RT_USING_MODULE
+  25:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #include <dlmodule.h>
+  26:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+  27:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  28:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifndef FINSH_ARG_MAX
+  29:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #define FINSH_ARG_MAX    8
+  30:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+  31:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  32:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** typedef int (*cmd_function_t)(int argc, char **argv);
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 2
+
+
+  33:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  34:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef FINSH_USING_MSH
+  35:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef FINSH_USING_MSH_ONLY
+  36:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** rt_bool_t msh_is_used(void)
+  37:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+  38:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return RT_TRUE;
+  39:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+  40:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #else
+  41:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef FINSH_USING_MSH_DEFAULT
+  42:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** static rt_bool_t __msh_state = RT_TRUE;
+  43:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #else
+  44:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** static rt_bool_t __msh_state = RT_FALSE;
+  45:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+  46:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** rt_bool_t msh_is_used(void)
+  47:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+  48:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return __msh_state;
+  49:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+  50:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  51:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** static int msh_exit(int argc, char **argv)
+  52:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+  53:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* return to finsh shell mode */
+  54:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     __msh_state = RT_FALSE;
+  55:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return 0;
+  56:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+  57:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** FINSH_FUNCTION_EXPORT_ALIAS(msh_exit, __cmd_exit, return to RT-Thread shell mode.);
+  58:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  59:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** static int msh_enter(void)
+  60:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+  61:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* enter module shell mode */
+  62:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     __msh_state = RT_TRUE;
+  63:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return 0;
+  64:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+  65:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** FINSH_FUNCTION_EXPORT_ALIAS(msh_enter, msh, use module shell);
+  66:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+  67:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  68:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** int msh_help(int argc, char **argv)
+  69:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+  70:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_kprintf("RT-Thread shell commands:\n");
+  71:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+  72:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         struct finsh_syscall *index;
+  73:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  74:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         for (index = _syscall_table_begin;
+  75:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 index < _syscall_table_end;
+  76:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 FINSH_NEXT_SYSCALL(index))
+  77:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+  78:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (strncmp(index->name, "__cmd_", 6) != 0) continue;
+  79:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #if defined(FINSH_USING_DESCRIPTION) && defined(FINSH_USING_SYMTAB)
+  80:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             rt_kprintf("%-16s - %s\n", &index->name[6], index->desc);
+  81:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #else
+  82:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             rt_kprintf("%s ", &index->name[6]);
+  83:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+  84:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+  85:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+  86:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_kprintf("\n");
+  87:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  88:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return 0;
+  89:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 3
+
+
+  90:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** FINSH_FUNCTION_EXPORT_ALIAS(msh_help, __cmd_help, RT-Thread shell help.);
+  91:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  92:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** int cmd_ps(int argc, char **argv)
+  93:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+  94:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     extern long list_thread(void);
+  95:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     extern int list_module(void);
+  96:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+  97:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef RT_USING_MODULE
+  98:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if ((argc == 2) && (strcmp(argv[1], "-m") == 0))
+  99:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         list_module();
+ 100:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     else
+ 101:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 102:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         list_thread();
+ 103:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return 0;
+ 104:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 105:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** FINSH_FUNCTION_EXPORT_ALIAS(cmd_ps, __cmd_ps, List threads in the system.);
+ 106:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 107:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef RT_USING_HEAP
+ 108:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** int cmd_free(int argc, char **argv)
+ 109:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+ 110:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     extern void list_mem(void);
+ 111:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     extern void list_memheap(void);
+ 112:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 113:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef RT_USING_MEMHEAP_AS_HEAP
+ 114:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     list_memheap();
+ 115:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #else
+ 116:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     list_mem();
+ 117:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 118:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return 0;
+ 119:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 120:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** FINSH_FUNCTION_EXPORT_ALIAS(cmd_free, __cmd_free, Show the memory usage in the system.);
+ 121:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 122:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 123:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** static int msh_split(char *cmd, rt_size_t length, char *argv[FINSH_ARG_MAX])
+ 124:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+ 125:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     char *ptr;
+ 126:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_size_t position;
+ 127:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_size_t argc;
+ 128:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_size_t i;
+ 129:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 130:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     ptr = cmd;
+ 131:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     position = 0; argc = 0;
+ 132:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 133:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     while (position < length)
+ 134:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 135:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         /* strip bank and tab */
+ 136:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         while ((*ptr == ' ' || *ptr == '\t') && position < length)
+ 137:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 138:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             *ptr = '\0';
+ 139:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             ptr ++; position ++;
+ 140:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 141:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 142:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if(argc >= FINSH_ARG_MAX)
+ 143:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 144:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             rt_kprintf("Too many args ! We only Use:\n");
+ 145:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             for(i = 0; i < argc; i++)
+ 146:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 4
+
+
+ 147:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 rt_kprintf("%s ", argv[i]);
+ 148:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 149:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             rt_kprintf("\n");
+ 150:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             break;
+ 151:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 152:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 153:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (position >= length) break;
+ 154:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 155:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         /* handle string */
+ 156:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (*ptr == '"')
+ 157:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 158:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             ptr ++; position ++;
+ 159:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             argv[argc] = ptr; argc ++;
+ 160:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 161:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             /* skip this string */
+ 162:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             while (*ptr != '"' && position < length)
+ 163:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 164:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 if (*ptr == '\\')
+ 165:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 {
+ 166:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     if (*(ptr + 1) == '"')
+ 167:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     {
+ 168:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                         ptr ++; position ++;
+ 169:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     }
+ 170:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 }
+ 171:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 ptr ++; position ++;
+ 172:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 173:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (position >= length) break;
+ 174:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 175:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             /* skip '"' */
+ 176:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             *ptr = '\0'; ptr ++; position ++;
+ 177:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 178:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         else
+ 179:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 180:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             argv[argc] = ptr;
+ 181:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             argc ++;
+ 182:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             while ((*ptr != ' ' && *ptr != '\t') && position < length)
+ 183:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 184:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 ptr ++; position ++;
+ 185:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 186:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (position >= length) break;
+ 187:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 188:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 189:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 190:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return argc;
+ 191:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 192:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 193:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** static cmd_function_t msh_get_cmd(char *cmd, int size)
+ 194:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+ 195:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     struct finsh_syscall *index;
+ 196:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     cmd_function_t cmd_func = RT_NULL;
+ 197:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 198:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     for (index = _syscall_table_begin;
+ 199:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             index < _syscall_table_end;
+ 200:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             FINSH_NEXT_SYSCALL(index))
+ 201:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 202:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (strncmp(index->name, "__cmd_", 6) != 0) continue;
+ 203:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 5
+
+
+ 204:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (strncmp(&index->name[6], cmd, size) == 0 &&
+ 205:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 index->name[6 + size] == '\0')
+ 206:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 207:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             cmd_func = (cmd_function_t)index->func;
+ 208:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             break;
+ 209:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 210:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 211:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 212:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return cmd_func;
+ 213:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 214:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 215:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #if defined(RT_USING_MODULE) && defined(RT_USING_DFS)
+ 216:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** /* Return 0 on module executed. Other value indicate error.
+ 217:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****  */
+ 218:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** int msh_exec_module(const char *cmd_line, int size)
+ 219:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+ 220:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int ret;
+ 221:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int fd = -1;
+ 222:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     char *pg_name;
+ 223:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int length, cmd_length = 0;
+ 224:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 225:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (size == 0)
+ 226:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -RT_ERROR;
+ 227:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* get the length of command0 */
+ 228:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     while ((cmd_line[cmd_length] != ' ' && cmd_line[cmd_length] != '\t') && cmd_length < size)
+ 229:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         cmd_length ++;
+ 230:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 231:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* get name length */
+ 232:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     length = cmd_length + 32;
+ 233:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 234:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* allocate program name memory */
+ 235:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     pg_name = (char *) rt_malloc(length);
+ 236:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (pg_name == RT_NULL)
+ 237:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -RT_ENOMEM;
+ 238:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 239:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* copy command0 */
+ 240:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     memcpy(pg_name, cmd_line, cmd_length);
+ 241:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     pg_name[cmd_length] = '\0';
+ 242:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 243:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (strstr(pg_name, ".mo") != RT_NULL || strstr(pg_name, ".MO") != RT_NULL)
+ 244:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 245:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         /* try to open program */
+ 246:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         fd = open(pg_name, O_RDONLY, 0);
+ 247:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 248:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         /* search in /bin path */
+ 249:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (fd < 0)
+ 250:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 251:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             rt_snprintf(pg_name, length - 1, "/bin/%.*s", cmd_length, cmd_line);
+ 252:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             fd = open(pg_name, O_RDONLY, 0);
+ 253:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 254:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 255:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     else
+ 256:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 257:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         /* add .mo and open program */
+ 258:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 259:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         /* try to open program */
+ 260:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         strcat(pg_name, ".mo");
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 6
+
+
+ 261:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         fd = open(pg_name, O_RDONLY, 0);
+ 262:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 263:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         /* search in /bin path */
+ 264:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (fd < 0)
+ 265:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 266:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             rt_snprintf(pg_name, length - 1, "/bin/%.*s.mo", cmd_length, cmd_line);
+ 267:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             fd = open(pg_name, O_RDONLY, 0);
+ 268:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 269:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 270:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 271:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (fd >= 0)
+ 272:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 273:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         /* found program */
+ 274:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         close(fd);
+ 275:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         dlmodule_exec(pg_name, cmd_line, size);
+ 276:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         ret = 0;
+ 277:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 278:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     else
+ 279:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 280:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         ret = -1;
+ 281:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 282:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 283:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_free(pg_name);
+ 284:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return ret;
+ 285:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 286:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 287:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** int system(const char *command)
+ 288:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+ 289:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int ret = -RT_ENOMEM;
+ 290:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     char *cmd = rt_strdup(command);
+ 291:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 292:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (cmd)
+ 293:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 294:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         ret = msh_exec(cmd, rt_strlen(cmd));
+ 295:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         rt_free(cmd);
+ 296:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 297:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 298:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return ret;
+ 299:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 300:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** RTM_EXPORT(system);
+ 301:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 302:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 303:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** static int _msh_exec_cmd(char *cmd, rt_size_t length, int *retp)
+ 304:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+ 305:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int argc;
+ 306:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_size_t cmd0_size = 0;
+ 307:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     cmd_function_t cmd_func;
+ 308:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     char *argv[FINSH_ARG_MAX];
+ 309:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 310:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     RT_ASSERT(cmd);
+ 311:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     RT_ASSERT(retp);
+ 312:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 313:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* find the size of first command */
+ 314:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     while ((cmd[cmd0_size] != ' ' && cmd[cmd0_size] != '\t') && cmd0_size < length)
+ 315:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         cmd0_size ++;
+ 316:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (cmd0_size == 0)
+ 317:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -RT_ERROR;
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 7
+
+
+ 318:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 319:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     cmd_func = msh_get_cmd(cmd, cmd0_size);
+ 320:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (cmd_func == RT_NULL)
+ 321:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -RT_ERROR;
+ 322:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 323:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* split arguments */
+ 324:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     memset(argv, 0x00, sizeof(argv));
+ 325:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     argc = msh_split(cmd, length, argv);
+ 326:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (argc == 0)
+ 327:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -RT_ERROR;
+ 328:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 329:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* exec this command */
+ 330:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     *retp = cmd_func(argc, argv);
+ 331:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return 0;
+ 332:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 333:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 334:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #if defined(RT_USING_LWP) && defined(RT_USING_DFS)
+ 335:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** static int _msh_exec_lwp(char *cmd, rt_size_t length)
+ 336:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+ 337:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int argc;
+ 338:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int cmd0_size = 0;
+ 339:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     char *argv[FINSH_ARG_MAX];
+ 340:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int fd = -1;
+ 341:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     char *pg_name;
+ 342:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 343:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     extern int exec(char*, int, char**);
+ 344:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 345:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* find the size of first command */
+ 346:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     while ((cmd[cmd0_size] != ' ' && cmd[cmd0_size] != '\t') && cmd0_size < length)
+ 347:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         cmd0_size ++;
+ 348:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (cmd0_size == 0)
+ 349:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -1;
+ 350:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 351:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* split arguments */
+ 352:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_memset(argv, 0x00, sizeof(argv));
+ 353:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     argc = msh_split(cmd, length, argv);
+ 354:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (argc == 0)
+ 355:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -1;
+ 356:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 357:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     pg_name = argv[0];
+ 358:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* try to open program */
+ 359:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     fd = open(pg_name, O_RDONLY, 0);
+ 360:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 361:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (fd < 0)
+ 362:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -1;
+ 363:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 364:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* found program */
+ 365:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     close(fd);
+ 366:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     exec(pg_name, argc, argv);
+ 367:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 368:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return 0;
+ 369:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 370:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 371:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 372:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** int msh_exec(char *cmd, rt_size_t length)
+ 373:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+ 374:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int cmd_ret;
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 8
+
+
+ 375:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 376:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* strim the beginning of command */
+ 377:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     while (*cmd  == ' ' || *cmd == '\t')
+ 378:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 379:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         cmd++;
+ 380:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         length--;
+ 381:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 382:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 383:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (length == 0)
+ 384:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return 0;
+ 385:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 386:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* Exec sequence:
+ 387:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****      * 1. built-in command
+ 388:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****      * 2. module(if enabled)
+ 389:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****      */
+ 390:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (_msh_exec_cmd(cmd, length, &cmd_ret) == 0)
+ 391:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 392:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return cmd_ret;
+ 393:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 394:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef RT_USING_DFS
+ 395:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef DFS_USING_WORKDIR
+ 396:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (msh_exec_script(cmd, length) == 0)
+ 397:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 398:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return 0;
+ 399:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 400:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 401:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 402:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef RT_USING_MODULE
+ 403:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (msh_exec_module(cmd, length) == 0)
+ 404:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 405:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return 0;
+ 406:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 407:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 408:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 409:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef RT_USING_LWP
+ 410:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (_msh_exec_lwp(cmd, length) == 0)
+ 411:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 412:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return 0;
+ 413:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 414:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 415:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 416:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 417:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* truncate the cmd at the first space. */
+ 418:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 419:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         char *tcmd;
+ 420:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         tcmd = cmd;
+ 421:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         while (*tcmd != ' ' && *tcmd != '\0')
+ 422:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 423:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             tcmd++;
+ 424:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 425:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         *tcmd = '\0';
+ 426:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 427:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_kprintf("%s: command not found.\n", cmd);
+ 428:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return -1;
+ 429:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 430:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 431:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** static int str_common(const char *str1, const char *str2)
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 9
+
+
+ 432:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+  27              		.loc 1 432 1 view -0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+ 433:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     const char *str = str1;
+  32              		.loc 1 433 5 view .LVU1
+ 434:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 435:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     while ((*str != 0) && (*str2 != 0) && (*str == *str2))
+  33              		.loc 1 435 5 view .LVU2
+ 433:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     const char *str = str1;
+  34              		.loc 1 433 17 is_stmt 0 view .LVU3
+  35 0000 0346     		mov	r3, r0
+  36              		.loc 1 435 11 is_stmt 1 view .LVU4
+  37              		.loc 1 435 13 is_stmt 0 view .LVU5
+  38 0002 0278     		ldrb	r2, [r0]	@ zero_extendqisi2
+  39              		.loc 1 435 11 view .LVU6
+  40 0004 62B1     		cbz	r2, .L10
+ 432:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     const char *str = str1;
+  41              		.loc 1 432 1 view .LVU7
+  42 0006 10B4     		push	{r4}
+  43              	.LCFI0:
+  44              		.cfi_def_cfa_offset 4
+  45              		.cfi_offset 4, -4
+  46              	.LVL1:
+  47              	.L7:
+  48              		.loc 1 435 28 discriminator 1 view .LVU8
+  49 0008 0C78     		ldrb	r4, [r1]	@ zero_extendqisi2
+  50              		.loc 1 435 24 discriminator 1 view .LVU9
+  51 000a 34B1     		cbz	r4, .L3
+  52              		.loc 1 435 40 discriminator 2 view .LVU10
+  53 000c A242     		cmp	r2, r4
+  54 000e 04D1     		bne	.L3
+ 436:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 437:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         str ++;
+  55              		.loc 1 437 9 is_stmt 1 view .LVU11
+  56              		.loc 1 437 13 is_stmt 0 view .LVU12
+  57 0010 0133     		adds	r3, r3, #1
+  58              	.LVL2:
+ 438:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         str2 ++;
+  59              		.loc 1 438 9 is_stmt 1 view .LVU13
+  60              		.loc 1 438 14 is_stmt 0 view .LVU14
+  61 0012 0131     		adds	r1, r1, #1
+  62              	.LVL3:
+ 435:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+  63              		.loc 1 435 11 is_stmt 1 view .LVU15
+ 435:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+  64              		.loc 1 435 13 is_stmt 0 view .LVU16
+  65 0014 1A78     		ldrb	r2, [r3]	@ zero_extendqisi2
+ 435:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+  66              		.loc 1 435 11 view .LVU17
+  67 0016 002A     		cmp	r2, #0
+  68 0018 F6D1     		bne	.L7
+  69              	.L3:
+ 439:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 440:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 10
+
+
+ 441:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return (str - str1);
+  70              		.loc 1 441 5 is_stmt 1 view .LVU18
+ 442:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+  71              		.loc 1 442 1 is_stmt 0 view .LVU19
+  72 001a 181A     		subs	r0, r3, r0
+  73              	.LVL4:
+  74              		.loc 1 442 1 view .LVU20
+  75 001c 10BC     		pop	{r4}
+  76              	.LCFI1:
+  77              		.cfi_restore 4
+  78              		.cfi_def_cfa_offset 0
+  79 001e 7047     		bx	lr
+  80              	.LVL5:
+  81              	.L10:
+ 441:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+  82              		.loc 1 441 5 is_stmt 1 view .LVU21
+  83              		.loc 1 442 1 is_stmt 0 view .LVU22
+  84 0020 001A     		subs	r0, r0, r0
+  85              	.LVL6:
+  86              		.loc 1 442 1 view .LVU23
+  87 0022 7047     		bx	lr
+  88              		.cfi_endproc
+  89              	.LFE26:
+  91              		.section	.rodata.msh_split.str1.4,"aMS",%progbits,1
+  92              		.align	2
+  93              	.LC0:
+  94 0000 546F6F20 		.ascii	"Too many args ! We only Use:\012\000"
+  94      6D616E79 
+  94      20617267 
+  94      73202120 
+  94      5765206F 
+  95 001e 0000     		.align	2
+  96              	.LC1:
+  97 0020 25732000 		.ascii	"%s \000"
+  98              		.align	2
+  99              	.LC2:
+ 100 0024 0A00     		.ascii	"\012\000"
+ 101              		.section	.text.msh_split,"ax",%progbits
+ 102              		.align	1
+ 103              		.syntax unified
+ 104              		.thumb
+ 105              		.thumb_func
+ 106              		.fpu softvfp
+ 108              	msh_split:
+ 109              	.LVL7:
+ 110              	.LFB22:
+ 124:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     char *ptr;
+ 111              		.loc 1 124 1 is_stmt 1 view -0
+ 112              		.cfi_startproc
+ 113              		@ args = 0, pretend = 0, frame = 0
+ 114              		@ frame_needed = 0, uses_anonymous_args = 0
+ 124:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     char *ptr;
+ 115              		.loc 1 124 1 is_stmt 0 view .LVU25
+ 116 0000 70B5     		push	{r4, r5, r6, lr}
+ 117              	.LCFI2:
+ 118              		.cfi_def_cfa_offset 16
+ 119              		.cfi_offset 4, -16
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 11
+
+
+ 120              		.cfi_offset 5, -12
+ 121              		.cfi_offset 6, -8
+ 122              		.cfi_offset 14, -4
+ 123 0002 1646     		mov	r6, r2
+ 125:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_size_t position;
+ 124              		.loc 1 125 5 is_stmt 1 view .LVU26
+ 126:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_size_t argc;
+ 125              		.loc 1 126 5 view .LVU27
+ 127:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_size_t i;
+ 126              		.loc 1 127 5 view .LVU28
+ 128:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 127              		.loc 1 128 5 view .LVU29
+ 130:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     position = 0; argc = 0;
+ 128              		.loc 1 130 5 view .LVU30
+ 129              	.LVL8:
+ 131:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 130              		.loc 1 131 5 view .LVU31
+ 131:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 131              		.loc 1 131 19 view .LVU32
+ 133:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 132              		.loc 1 133 5 view .LVU33
+ 131:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 133              		.loc 1 131 24 is_stmt 0 view .LVU34
+ 134 0004 0025     		movs	r5, #0
+ 131:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 135              		.loc 1 131 14 view .LVU35
+ 136 0006 2B46     		mov	r3, r5
+ 133:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 137              		.loc 1 133 11 view .LVU36
+ 138 0008 4DE0     		b	.L12
+ 139              	.LVL9:
+ 140              	.L13:
+ 136:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 141              		.loc 1 136 46 discriminator 3 view .LVU37
+ 142 000a 8B42     		cmp	r3, r1
+ 143 000c 08D2     		bcs	.L14
+ 138:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             ptr ++; position ++;
+ 144              		.loc 1 138 13 is_stmt 1 view .LVU38
+ 138:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             ptr ++; position ++;
+ 145              		.loc 1 138 18 is_stmt 0 view .LVU39
+ 146 000e 0022     		movs	r2, #0
+ 147 0010 00F8012B 		strb	r2, [r0], #1
+ 148              	.LVL10:
+ 139:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 149              		.loc 1 139 13 is_stmt 1 view .LVU40
+ 139:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 150              		.loc 1 139 21 view .LVU41
+ 139:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 151              		.loc 1 139 30 is_stmt 0 view .LVU42
+ 152 0014 0133     		adds	r3, r3, #1
+ 153              	.LVL11:
+ 154              	.L29:
+ 136:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 155              		.loc 1 136 15 is_stmt 1 view .LVU43
+ 136:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 156              		.loc 1 136 17 is_stmt 0 view .LVU44
+ 157 0016 0478     		ldrb	r4, [r0]	@ zero_extendqisi2
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 12
+
+
+ 136:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 158              		.loc 1 136 15 view .LVU45
+ 159 0018 202C     		cmp	r4, #32
+ 160 001a F6D0     		beq	.L13
+ 136:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 161              		.loc 1 136 29 discriminator 2 view .LVU46
+ 162 001c 092C     		cmp	r4, #9
+ 163 001e F4D0     		beq	.L13
+ 164              	.L14:
+ 142:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 165              		.loc 1 142 9 is_stmt 1 view .LVU47
+ 142:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 166              		.loc 1 142 11 is_stmt 0 view .LVU48
+ 167 0020 072D     		cmp	r5, #7
+ 168 0022 07D8     		bhi	.L31
+ 153:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 169              		.loc 1 153 9 is_stmt 1 view .LVU49
+ 153:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 170              		.loc 1 153 12 is_stmt 0 view .LVU50
+ 171 0024 8B42     		cmp	r3, r1
+ 172 0026 15D2     		bcs	.L19
+ 156:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 173              		.loc 1 156 9 is_stmt 1 view .LVU51
+ 156:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 174              		.loc 1 156 12 is_stmt 0 view .LVU52
+ 175 0028 222C     		cmp	r4, #34
+ 176 002a 15D0     		beq	.L32
+ 180:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             argc ++;
+ 177              		.loc 1 180 13 is_stmt 1 view .LVU53
+ 180:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             argc ++;
+ 178              		.loc 1 180 24 is_stmt 0 view .LVU54
+ 179 002c 46F82500 		str	r0, [r6, r5, lsl #2]
+ 181:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             while ((*ptr != ' ' && *ptr != '\t') && position < length)
+ 180              		.loc 1 181 13 is_stmt 1 view .LVU55
+ 181:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             while ((*ptr != ' ' && *ptr != '\t') && position < length)
+ 181              		.loc 1 181 18 is_stmt 0 view .LVU56
+ 182 0030 0135     		adds	r5, r5, #1
+ 183              	.LVL12:
+ 182:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 184              		.loc 1 182 13 is_stmt 1 view .LVU57
+ 182:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 185              		.loc 1 182 19 is_stmt 0 view .LVU58
+ 186 0032 2FE0     		b	.L26
+ 187              	.L31:
+ 144:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             for(i = 0; i < argc; i++)
+ 188              		.loc 1 144 13 is_stmt 1 view .LVU59
+ 189 0034 1D48     		ldr	r0, .L33
+ 190              	.LVL13:
+ 144:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             for(i = 0; i < argc; i++)
+ 191              		.loc 1 144 13 is_stmt 0 view .LVU60
+ 192 0036 FFF7FEFF 		bl	rt_kprintf
+ 193              	.LVL14:
+ 145:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 194              		.loc 1 145 13 is_stmt 1 view .LVU61
+ 145:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 195              		.loc 1 145 19 is_stmt 0 view .LVU62
+ 196 003a 0024     		movs	r4, #0
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 13
+
+
+ 145:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 197              		.loc 1 145 13 view .LVU63
+ 198 003c 05E0     		b	.L17
+ 199              	.LVL15:
+ 200              	.L18:
+ 147:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 201              		.loc 1 147 17 is_stmt 1 discriminator 3 view .LVU64
+ 202 003e 56F82410 		ldr	r1, [r6, r4, lsl #2]
+ 203 0042 1B48     		ldr	r0, .L33+4
+ 204 0044 FFF7FEFF 		bl	rt_kprintf
+ 205              	.LVL16:
+ 145:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 206              		.loc 1 145 34 discriminator 3 view .LVU65
+ 145:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 207              		.loc 1 145 35 is_stmt 0 discriminator 3 view .LVU66
+ 208 0048 0134     		adds	r4, r4, #1
+ 209              	.LVL17:
+ 210              	.L17:
+ 145:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 211              		.loc 1 145 24 is_stmt 1 discriminator 1 view .LVU67
+ 145:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 212              		.loc 1 145 13 is_stmt 0 discriminator 1 view .LVU68
+ 213 004a A542     		cmp	r5, r4
+ 214 004c F7D8     		bhi	.L18
+ 149:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             break;
+ 215              		.loc 1 149 13 is_stmt 1 view .LVU69
+ 216 004e 1948     		ldr	r0, .L33+8
+ 217 0050 FFF7FEFF 		bl	rt_kprintf
+ 218              	.LVL18:
+ 150:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 219              		.loc 1 150 13 view .LVU70
+ 220              	.L19:
+ 190:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 221              		.loc 1 190 5 view .LVU71
+ 191:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 222              		.loc 1 191 1 is_stmt 0 view .LVU72
+ 223 0054 2846     		mov	r0, r5
+ 224 0056 70BD     		pop	{r4, r5, r6, pc}
+ 225              	.LVL19:
+ 226              	.L32:
+ 158:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             argv[argc] = ptr; argc ++;
+ 227              		.loc 1 158 13 is_stmt 1 view .LVU73
+ 158:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             argv[argc] = ptr; argc ++;
+ 228              		.loc 1 158 17 is_stmt 0 view .LVU74
+ 229 0058 0130     		adds	r0, r0, #1
+ 230              	.LVL20:
+ 158:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             argv[argc] = ptr; argc ++;
+ 231              		.loc 1 158 21 is_stmt 1 view .LVU75
+ 158:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             argv[argc] = ptr; argc ++;
+ 232              		.loc 1 158 30 is_stmt 0 view .LVU76
+ 233 005a 0133     		adds	r3, r3, #1
+ 234              	.LVL21:
+ 159:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 235              		.loc 1 159 13 is_stmt 1 view .LVU77
+ 159:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 236              		.loc 1 159 24 is_stmt 0 view .LVU78
+ 237 005c 46F82500 		str	r0, [r6, r5, lsl #2]
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 14
+
+
+ 159:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 238              		.loc 1 159 31 is_stmt 1 view .LVU79
+ 159:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 239              		.loc 1 159 36 is_stmt 0 view .LVU80
+ 240 0060 0135     		adds	r5, r5, #1
+ 241              	.LVL22:
+ 162:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 242              		.loc 1 162 13 is_stmt 1 view .LVU81
+ 162:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 243              		.loc 1 162 19 is_stmt 0 view .LVU82
+ 244 0062 01E0     		b	.L21
+ 245              	.L22:
+ 171:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 246              		.loc 1 171 17 is_stmt 1 view .LVU83
+ 171:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 247              		.loc 1 171 21 is_stmt 0 view .LVU84
+ 248 0064 0130     		adds	r0, r0, #1
+ 249              	.LVL23:
+ 171:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 250              		.loc 1 171 25 is_stmt 1 view .LVU85
+ 171:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 251              		.loc 1 171 34 is_stmt 0 view .LVU86
+ 252 0066 0133     		adds	r3, r3, #1
+ 253              	.LVL24:
+ 254              	.L21:
+ 162:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 255              		.loc 1 162 19 is_stmt 1 view .LVU87
+ 162:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 256              		.loc 1 162 20 is_stmt 0 view .LVU88
+ 257 0068 0278     		ldrb	r2, [r0]	@ zero_extendqisi2
+ 162:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 258              		.loc 1 162 19 view .LVU89
+ 259 006a 222A     		cmp	r2, #34
+ 260 006c 09D0     		beq	.L23
+ 162:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 261              		.loc 1 162 32 discriminator 1 view .LVU90
+ 262 006e 8B42     		cmp	r3, r1
+ 263 0070 07D2     		bcs	.L23
+ 164:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 {
+ 264              		.loc 1 164 17 is_stmt 1 view .LVU91
+ 164:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 {
+ 265              		.loc 1 164 20 is_stmt 0 view .LVU92
+ 266 0072 5C2A     		cmp	r2, #92
+ 267 0074 F6D1     		bne	.L22
+ 166:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     {
+ 268              		.loc 1 166 21 is_stmt 1 view .LVU93
+ 166:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     {
+ 269              		.loc 1 166 25 is_stmt 0 view .LVU94
+ 270 0076 4278     		ldrb	r2, [r0, #1]	@ zero_extendqisi2
+ 166:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     {
+ 271              		.loc 1 166 24 view .LVU95
+ 272 0078 222A     		cmp	r2, #34
+ 273 007a F3D1     		bne	.L22
+ 168:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     }
+ 274              		.loc 1 168 25 is_stmt 1 view .LVU96
+ 168:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     }
+ 275              		.loc 1 168 29 is_stmt 0 view .LVU97
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 15
+
+
+ 276 007c 0130     		adds	r0, r0, #1
+ 277              	.LVL25:
+ 168:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     }
+ 278              		.loc 1 168 33 is_stmt 1 view .LVU98
+ 168:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     }
+ 279              		.loc 1 168 42 is_stmt 0 view .LVU99
+ 280 007e 0133     		adds	r3, r3, #1
+ 281              	.LVL26:
+ 168:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     }
+ 282              		.loc 1 168 42 view .LVU100
+ 283 0080 F0E7     		b	.L22
+ 284              	.L23:
+ 173:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 285              		.loc 1 173 13 is_stmt 1 view .LVU101
+ 173:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 286              		.loc 1 173 16 is_stmt 0 view .LVU102
+ 287 0082 8B42     		cmp	r3, r1
+ 288 0084 E6D2     		bcs	.L19
+ 176:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 289              		.loc 1 176 13 is_stmt 1 view .LVU103
+ 176:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 290              		.loc 1 176 18 is_stmt 0 view .LVU104
+ 291 0086 0022     		movs	r2, #0
+ 292 0088 00F8012B 		strb	r2, [r0], #1
+ 293              	.LVL27:
+ 176:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 294              		.loc 1 176 26 is_stmt 1 view .LVU105
+ 176:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 295              		.loc 1 176 34 view .LVU106
+ 176:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 296              		.loc 1 176 43 is_stmt 0 view .LVU107
+ 297 008c 0133     		adds	r3, r3, #1
+ 298              	.LVL28:
+ 176:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 299              		.loc 1 176 43 view .LVU108
+ 300 008e 0AE0     		b	.L12
+ 301              	.L28:
+ 184:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 302              		.loc 1 184 17 is_stmt 1 view .LVU109
+ 184:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 303              		.loc 1 184 21 is_stmt 0 view .LVU110
+ 304 0090 0130     		adds	r0, r0, #1
+ 305              	.LVL29:
+ 184:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 306              		.loc 1 184 25 is_stmt 1 view .LVU111
+ 184:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 307              		.loc 1 184 34 is_stmt 0 view .LVU112
+ 308 0092 0133     		adds	r3, r3, #1
+ 309              	.LVL30:
+ 310              	.L26:
+ 182:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 311              		.loc 1 182 19 is_stmt 1 view .LVU113
+ 182:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 312              		.loc 1 182 21 is_stmt 0 view .LVU114
+ 313 0094 0278     		ldrb	r2, [r0]	@ zero_extendqisi2
+ 182:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 314              		.loc 1 182 19 view .LVU115
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 16
+
+
+ 315 0096 202A     		cmp	r2, #32
+ 316 0098 03D0     		beq	.L27
+ 182:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 317              		.loc 1 182 33 discriminator 1 view .LVU116
+ 318 009a 092A     		cmp	r2, #9
+ 319 009c 01D0     		beq	.L27
+ 182:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 320              		.loc 1 182 50 discriminator 2 view .LVU117
+ 321 009e 8B42     		cmp	r3, r1
+ 322 00a0 F6D3     		bcc	.L28
+ 323              	.L27:
+ 186:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 324              		.loc 1 186 13 is_stmt 1 view .LVU118
+ 186:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 325              		.loc 1 186 16 is_stmt 0 view .LVU119
+ 326 00a2 8B42     		cmp	r3, r1
+ 327 00a4 D6D2     		bcs	.L19
+ 328              	.LVL31:
+ 329              	.L12:
+ 133:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 330              		.loc 1 133 11 is_stmt 1 view .LVU120
+ 331 00a6 8B42     		cmp	r3, r1
+ 332 00a8 B5D3     		bcc	.L29
+ 133:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 333              		.loc 1 133 11 is_stmt 0 view .LVU121
+ 334 00aa D3E7     		b	.L19
+ 335              	.L34:
+ 336              		.align	2
+ 337              	.L33:
+ 338 00ac 00000000 		.word	.LC0
+ 339 00b0 20000000 		.word	.LC1
+ 340 00b4 24000000 		.word	.LC2
+ 341              		.cfi_endproc
+ 342              	.LFE22:
+ 344              		.section	.rodata.msh_help.str1.4,"aMS",%progbits,1
+ 345              		.align	2
+ 346              	.LC3:
+ 347 0000 52542D54 		.ascii	"RT-Thread shell commands:\012\000"
+ 347      68726561 
+ 347      64207368 
+ 347      656C6C20 
+ 347      636F6D6D 
+ 348 001b 00       		.align	2
+ 349              	.LC4:
+ 350 001c 5F5F636D 		.ascii	"__cmd_\000"
+ 350      645F00
+ 351              		.section	.text.msh_help,"ax",%progbits
+ 352              		.align	1
+ 353              		.global	msh_help
+ 354              		.syntax unified
+ 355              		.thumb
+ 356              		.thumb_func
+ 357              		.fpu softvfp
+ 359              	msh_help:
+ 360              	.LVL32:
+ 361              	.LFB19:
+  69:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_kprintf("RT-Thread shell commands:\n");
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 17
+
+
+ 362              		.loc 1 69 1 is_stmt 1 view -0
+ 363              		.cfi_startproc
+ 364              		@ args = 0, pretend = 0, frame = 0
+ 365              		@ frame_needed = 0, uses_anonymous_args = 0
+  69:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_kprintf("RT-Thread shell commands:\n");
+ 366              		.loc 1 69 1 is_stmt 0 view .LVU123
+ 367 0000 38B5     		push	{r3, r4, r5, lr}
+ 368              	.LCFI3:
+ 369              		.cfi_def_cfa_offset 16
+ 370              		.cfi_offset 3, -16
+ 371              		.cfi_offset 4, -12
+ 372              		.cfi_offset 5, -8
+ 373              		.cfi_offset 14, -4
+  70:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 374              		.loc 1 70 5 is_stmt 1 view .LVU124
+ 375 0002 0E48     		ldr	r0, .L41
+ 376              	.LVL33:
+  70:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 377              		.loc 1 70 5 is_stmt 0 view .LVU125
+ 378 0004 FFF7FEFF 		bl	rt_kprintf
+ 379              	.LVL34:
+ 380              	.LBB2:
+  72:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 381              		.loc 1 72 9 is_stmt 1 view .LVU126
+  74:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 index < _syscall_table_end;
+ 382              		.loc 1 74 9 view .LVU127
+  74:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 index < _syscall_table_end;
+ 383              		.loc 1 74 20 is_stmt 0 view .LVU128
+ 384 0008 0D4B     		ldr	r3, .L41+4
+ 385 000a 1C68     		ldr	r4, [r3]
+ 386              	.LVL35:
+  74:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 index < _syscall_table_end;
+ 387              		.loc 1 74 9 view .LVU129
+ 388 000c 00E0     		b	.L36
+ 389              	.L37:
+  76:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 390              		.loc 1 76 17 is_stmt 1 view .LVU130
+ 391 000e 0834     		adds	r4, r4, #8
+ 392              	.LVL36:
+ 393              	.L36:
+  75:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 FINSH_NEXT_SYSCALL(index))
+ 394              		.loc 1 75 17 discriminator 1 view .LVU131
+  75:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 FINSH_NEXT_SYSCALL(index))
+ 395              		.loc 1 75 23 is_stmt 0 discriminator 1 view .LVU132
+ 396 0010 0C4B     		ldr	r3, .L41+8
+ 397 0012 1B68     		ldr	r3, [r3]
+  74:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 index < _syscall_table_end;
+ 398              		.loc 1 74 9 discriminator 1 view .LVU133
+ 399 0014 A342     		cmp	r3, r4
+ 400 0016 0CD9     		bls	.L40
+  78:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #if defined(FINSH_USING_DESCRIPTION) && defined(FINSH_USING_SYMTAB)
+ 401              		.loc 1 78 13 is_stmt 1 view .LVU134
+  78:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #if defined(FINSH_USING_DESCRIPTION) && defined(FINSH_USING_SYMTAB)
+ 402              		.loc 1 78 17 is_stmt 0 view .LVU135
+ 403 0018 2568     		ldr	r5, [r4]
+ 404 001a 0622     		movs	r2, #6
+ 405 001c 0A49     		ldr	r1, .L41+12
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 18
+
+
+ 406 001e 2846     		mov	r0, r5
+ 407 0020 FFF7FEFF 		bl	strncmp
+ 408              	.LVL37:
+  78:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #if defined(FINSH_USING_DESCRIPTION) && defined(FINSH_USING_SYMTAB)
+ 409              		.loc 1 78 16 view .LVU136
+ 410 0024 0028     		cmp	r0, #0
+ 411 0026 F2D1     		bne	.L37
+  82:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 412              		.loc 1 82 13 is_stmt 1 view .LVU137
+ 413 0028 A91D     		adds	r1, r5, #6
+ 414 002a 0848     		ldr	r0, .L41+16
+ 415 002c FFF7FEFF 		bl	rt_kprintf
+ 416              	.LVL38:
+ 417 0030 EDE7     		b	.L37
+ 418              	.L40:
+ 419              	.LBE2:
+  86:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 420              		.loc 1 86 5 view .LVU138
+ 421 0032 0748     		ldr	r0, .L41+20
+ 422 0034 FFF7FEFF 		bl	rt_kprintf
+ 423              	.LVL39:
+  88:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 424              		.loc 1 88 5 view .LVU139
+  89:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** FINSH_FUNCTION_EXPORT_ALIAS(msh_help, __cmd_help, RT-Thread shell help.);
+ 425              		.loc 1 89 1 is_stmt 0 view .LVU140
+ 426 0038 0020     		movs	r0, #0
+ 427 003a 38BD     		pop	{r3, r4, r5, pc}
+ 428              	.LVL40:
+ 429              	.L42:
+  89:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** FINSH_FUNCTION_EXPORT_ALIAS(msh_help, __cmd_help, RT-Thread shell help.);
+ 430              		.loc 1 89 1 view .LVU141
+ 431              		.align	2
+ 432              	.L41:
+ 433 003c 00000000 		.word	.LC3
+ 434 0040 00000000 		.word	_syscall_table_begin
+ 435 0044 00000000 		.word	_syscall_table_end
+ 436 0048 1C000000 		.word	.LC4
+ 437 004c 20000000 		.word	.LC1
+ 438 0050 24000000 		.word	.LC2
+ 439              		.cfi_endproc
+ 440              	.LFE19:
+ 442              		.section	.text.msh_get_cmd,"ax",%progbits
+ 443              		.align	1
+ 444              		.syntax unified
+ 445              		.thumb
+ 446              		.thumb_func
+ 447              		.fpu softvfp
+ 449              	msh_get_cmd:
+ 450              	.LVL41:
+ 451              	.LFB23:
+ 194:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     struct finsh_syscall *index;
+ 452              		.loc 1 194 1 is_stmt 1 view -0
+ 453              		.cfi_startproc
+ 454              		@ args = 0, pretend = 0, frame = 0
+ 455              		@ frame_needed = 0, uses_anonymous_args = 0
+ 194:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     struct finsh_syscall *index;
+ 456              		.loc 1 194 1 is_stmt 0 view .LVU143
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 19
+
+
+ 457 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 458              	.LCFI4:
+ 459              		.cfi_def_cfa_offset 24
+ 460              		.cfi_offset 3, -24
+ 461              		.cfi_offset 4, -20
+ 462              		.cfi_offset 5, -16
+ 463              		.cfi_offset 6, -12
+ 464              		.cfi_offset 7, -8
+ 465              		.cfi_offset 14, -4
+ 466 0002 0746     		mov	r7, r0
+ 467 0004 0E46     		mov	r6, r1
+ 195:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     cmd_function_t cmd_func = RT_NULL;
+ 468              		.loc 1 195 5 is_stmt 1 view .LVU144
+ 196:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 469              		.loc 1 196 5 view .LVU145
+ 470              	.LVL42:
+ 198:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             index < _syscall_table_end;
+ 471              		.loc 1 198 5 view .LVU146
+ 198:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             index < _syscall_table_end;
+ 472              		.loc 1 198 16 is_stmt 0 view .LVU147
+ 473 0006 0F4B     		ldr	r3, .L50
+ 474 0008 1C68     		ldr	r4, [r3]
+ 475              	.LVL43:
+ 198:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             index < _syscall_table_end;
+ 476              		.loc 1 198 5 view .LVU148
+ 477 000a 00E0     		b	.L44
+ 478              	.LVL44:
+ 479              	.L45:
+ 200:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 480              		.loc 1 200 13 is_stmt 1 view .LVU149
+ 481 000c 0834     		adds	r4, r4, #8
+ 482              	.LVL45:
+ 483              	.L44:
+ 199:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             FINSH_NEXT_SYSCALL(index))
+ 484              		.loc 1 199 13 discriminator 1 view .LVU150
+ 199:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             FINSH_NEXT_SYSCALL(index))
+ 485              		.loc 1 199 19 is_stmt 0 discriminator 1 view .LVU151
+ 486 000e 0E4B     		ldr	r3, .L50+4
+ 487 0010 1B68     		ldr	r3, [r3]
+ 198:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             index < _syscall_table_end;
+ 488              		.loc 1 198 5 discriminator 1 view .LVU152
+ 489 0012 A342     		cmp	r3, r4
+ 490 0014 14D9     		bls	.L49
+ 202:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 491              		.loc 1 202 9 is_stmt 1 view .LVU153
+ 202:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 492              		.loc 1 202 13 is_stmt 0 view .LVU154
+ 493 0016 2568     		ldr	r5, [r4]
+ 494 0018 0622     		movs	r2, #6
+ 495 001a 0C49     		ldr	r1, .L50+8
+ 496 001c 2846     		mov	r0, r5
+ 497 001e FFF7FEFF 		bl	strncmp
+ 498              	.LVL46:
+ 202:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 499              		.loc 1 202 12 view .LVU155
+ 500 0022 0028     		cmp	r0, #0
+ 501 0024 F2D1     		bne	.L45
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 20
+
+
+ 204:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 index->name[6 + size] == '\0')
+ 502              		.loc 1 204 9 is_stmt 1 view .LVU156
+ 204:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 index->name[6 + size] == '\0')
+ 503              		.loc 1 204 13 is_stmt 0 view .LVU157
+ 504 0026 3246     		mov	r2, r6
+ 505 0028 3946     		mov	r1, r7
+ 506 002a A81D     		adds	r0, r5, #6
+ 507 002c FFF7FEFF 		bl	strncmp
+ 508              	.LVL47:
+ 204:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 index->name[6 + size] == '\0')
+ 509              		.loc 1 204 12 view .LVU158
+ 510 0030 0028     		cmp	r0, #0
+ 511 0032 EBD1     		bne	.L45
+ 205:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 512              		.loc 1 205 31 discriminator 1 view .LVU159
+ 513 0034 B31D     		adds	r3, r6, #6
+ 205:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 514              		.loc 1 205 28 discriminator 1 view .LVU160
+ 515 0036 EB5C     		ldrb	r3, [r5, r3]	@ zero_extendqisi2
+ 204:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 index->name[6 + size] == '\0')
+ 516              		.loc 1 204 54 discriminator 1 view .LVU161
+ 517 0038 002B     		cmp	r3, #0
+ 518 003a E7D1     		bne	.L45
+ 207:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             break;
+ 519              		.loc 1 207 13 is_stmt 1 view .LVU162
+ 207:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             break;
+ 520              		.loc 1 207 22 is_stmt 0 view .LVU163
+ 521 003c 6068     		ldr	r0, [r4, #4]
+ 522              	.LVL48:
+ 208:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 523              		.loc 1 208 13 is_stmt 1 view .LVU164
+ 524 003e 00E0     		b	.L43
+ 525              	.LVL49:
+ 526              	.L49:
+ 196:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 527              		.loc 1 196 20 is_stmt 0 view .LVU165
+ 528 0040 0020     		movs	r0, #0
+ 212:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 529              		.loc 1 212 5 is_stmt 1 view .LVU166
+ 530              	.LVL50:
+ 531              	.L43:
+ 213:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 532              		.loc 1 213 1 is_stmt 0 view .LVU167
+ 533 0042 F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 534              	.LVL51:
+ 535              	.L51:
+ 213:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 536              		.loc 1 213 1 view .LVU168
+ 537              		.align	2
+ 538              	.L50:
+ 539 0044 00000000 		.word	_syscall_table_begin
+ 540 0048 00000000 		.word	_syscall_table_end
+ 541 004c 1C000000 		.word	.LC4
+ 542              		.cfi_endproc
+ 543              	.LFE23:
+ 545              		.section	.text.cmd_ps,"ax",%progbits
+ 546              		.align	1
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 21
+
+
+ 547              		.global	cmd_ps
+ 548              		.syntax unified
+ 549              		.thumb
+ 550              		.thumb_func
+ 551              		.fpu softvfp
+ 553              	cmd_ps:
+ 554              	.LVL52:
+ 555              	.LFB20:
+  93:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     extern long list_thread(void);
+ 556              		.loc 1 93 1 is_stmt 1 view -0
+ 557              		.cfi_startproc
+ 558              		@ args = 0, pretend = 0, frame = 0
+ 559              		@ frame_needed = 0, uses_anonymous_args = 0
+  93:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     extern long list_thread(void);
+ 560              		.loc 1 93 1 is_stmt 0 view .LVU170
+ 561 0000 08B5     		push	{r3, lr}
+ 562              	.LCFI5:
+ 563              		.cfi_def_cfa_offset 8
+ 564              		.cfi_offset 3, -8
+ 565              		.cfi_offset 14, -4
+  94:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     extern int list_module(void);
+ 566              		.loc 1 94 5 is_stmt 1 view .LVU171
+  95:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 567              		.loc 1 95 5 view .LVU172
+ 102:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return 0;
+ 568              		.loc 1 102 9 view .LVU173
+ 569 0002 FFF7FEFF 		bl	list_thread
+ 570              	.LVL53:
+ 103:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 571              		.loc 1 103 5 view .LVU174
+ 104:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** FINSH_FUNCTION_EXPORT_ALIAS(cmd_ps, __cmd_ps, List threads in the system.);
+ 572              		.loc 1 104 1 is_stmt 0 view .LVU175
+ 573 0006 0020     		movs	r0, #0
+ 574 0008 08BD     		pop	{r3, pc}
+ 575              		.cfi_endproc
+ 576              	.LFE20:
+ 578              		.section	.text.cmd_free,"ax",%progbits
+ 579              		.align	1
+ 580              		.global	cmd_free
+ 581              		.syntax unified
+ 582              		.thumb
+ 583              		.thumb_func
+ 584              		.fpu softvfp
+ 586              	cmd_free:
+ 587              	.LVL54:
+ 588              	.LFB21:
+ 109:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     extern void list_mem(void);
+ 589              		.loc 1 109 1 is_stmt 1 view -0
+ 590              		.cfi_startproc
+ 591              		@ args = 0, pretend = 0, frame = 0
+ 592              		@ frame_needed = 0, uses_anonymous_args = 0
+ 109:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     extern void list_mem(void);
+ 593              		.loc 1 109 1 is_stmt 0 view .LVU177
+ 594 0000 08B5     		push	{r3, lr}
+ 595              	.LCFI6:
+ 596              		.cfi_def_cfa_offset 8
+ 597              		.cfi_offset 3, -8
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 22
+
+
+ 598              		.cfi_offset 14, -4
+ 110:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     extern void list_memheap(void);
+ 599              		.loc 1 110 5 is_stmt 1 view .LVU178
+ 111:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 600              		.loc 1 111 5 view .LVU179
+ 116:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 601              		.loc 1 116 5 view .LVU180
+ 602 0002 FFF7FEFF 		bl	list_mem
+ 603              	.LVL55:
+ 118:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 604              		.loc 1 118 5 view .LVU181
+ 119:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** FINSH_FUNCTION_EXPORT_ALIAS(cmd_free, __cmd_free, Show the memory usage in the system.);
+ 605              		.loc 1 119 1 is_stmt 0 view .LVU182
+ 606 0006 0020     		movs	r0, #0
+ 607 0008 08BD     		pop	{r3, pc}
+ 608              		.cfi_endproc
+ 609              	.LFE21:
+ 611              		.section	.text._msh_exec_cmd,"ax",%progbits
+ 612              		.align	1
+ 613              		.syntax unified
+ 614              		.thumb
+ 615              		.thumb_func
+ 616              		.fpu softvfp
+ 618              	_msh_exec_cmd:
+ 619              	.LVL56:
+ 620              	.LFB24:
+ 304:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int argc;
+ 621              		.loc 1 304 1 is_stmt 1 view -0
+ 622              		.cfi_startproc
+ 623              		@ args = 0, pretend = 0, frame = 32
+ 624              		@ frame_needed = 0, uses_anonymous_args = 0
+ 304:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int argc;
+ 625              		.loc 1 304 1 is_stmt 0 view .LVU184
+ 626 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 627              	.LCFI7:
+ 628              		.cfi_def_cfa_offset 20
+ 629              		.cfi_offset 4, -20
+ 630              		.cfi_offset 5, -16
+ 631              		.cfi_offset 6, -12
+ 632              		.cfi_offset 7, -8
+ 633              		.cfi_offset 14, -4
+ 634 0002 89B0     		sub	sp, sp, #36
+ 635              	.LCFI8:
+ 636              		.cfi_def_cfa_offset 56
+ 637 0004 0446     		mov	r4, r0
+ 638 0006 0D46     		mov	r5, r1
+ 639 0008 1646     		mov	r6, r2
+ 305:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_size_t cmd0_size = 0;
+ 640              		.loc 1 305 5 is_stmt 1 view .LVU185
+ 306:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     cmd_function_t cmd_func;
+ 641              		.loc 1 306 5 view .LVU186
+ 642              	.LVL57:
+ 307:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     char *argv[FINSH_ARG_MAX];
+ 643              		.loc 1 307 5 view .LVU187
+ 308:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 644              		.loc 1 308 5 view .LVU188
+ 310:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     RT_ASSERT(retp);
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 23
+
+
+ 645              		.loc 1 310 19 view .LVU189
+ 311:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 646              		.loc 1 311 20 view .LVU190
+ 314:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         cmd0_size ++;
+ 647              		.loc 1 314 5 view .LVU191
+ 306:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     cmd_function_t cmd_func;
+ 648              		.loc 1 306 15 is_stmt 0 view .LVU192
+ 649 000a 0021     		movs	r1, #0
+ 650              	.LVL58:
+ 314:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         cmd0_size ++;
+ 651              		.loc 1 314 11 view .LVU193
+ 652 000c 00E0     		b	.L57
+ 653              	.LVL59:
+ 654              	.L59:
+ 315:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (cmd0_size == 0)
+ 655              		.loc 1 315 9 is_stmt 1 view .LVU194
+ 315:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (cmd0_size == 0)
+ 656              		.loc 1 315 19 is_stmt 0 view .LVU195
+ 657 000e 0131     		adds	r1, r1, #1
+ 658              	.LVL60:
+ 659              	.L57:
+ 314:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         cmd0_size ++;
+ 660              		.loc 1 314 11 is_stmt 1 view .LVU196
+ 314:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         cmd0_size ++;
+ 661              		.loc 1 314 16 is_stmt 0 view .LVU197
+ 662 0010 635C     		ldrb	r3, [r4, r1]	@ zero_extendqisi2
+ 314:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         cmd0_size ++;
+ 663              		.loc 1 314 11 view .LVU198
+ 664 0012 202B     		cmp	r3, #32
+ 665 0014 03D0     		beq	.L58
+ 314:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         cmd0_size ++;
+ 666              		.loc 1 314 35 discriminator 1 view .LVU199
+ 667 0016 092B     		cmp	r3, #9
+ 668 0018 01D0     		beq	.L58
+ 314:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         cmd0_size ++;
+ 669              		.loc 1 314 62 discriminator 2 view .LVU200
+ 670 001a A942     		cmp	r1, r5
+ 671 001c F7D3     		bcc	.L59
+ 672              	.L58:
+ 316:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -RT_ERROR;
+ 673              		.loc 1 316 5 is_stmt 1 view .LVU201
+ 316:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -RT_ERROR;
+ 674              		.loc 1 316 8 is_stmt 0 view .LVU202
+ 675 001e A9B1     		cbz	r1, .L61
+ 319:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (cmd_func == RT_NULL)
+ 676              		.loc 1 319 5 is_stmt 1 view .LVU203
+ 319:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (cmd_func == RT_NULL)
+ 677              		.loc 1 319 16 is_stmt 0 view .LVU204
+ 678 0020 2046     		mov	r0, r4
+ 679              	.LVL61:
+ 319:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (cmd_func == RT_NULL)
+ 680              		.loc 1 319 16 view .LVU205
+ 681 0022 FFF7FEFF 		bl	msh_get_cmd
+ 682              	.LVL62:
+ 320:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -RT_ERROR;
+ 683              		.loc 1 320 5 is_stmt 1 view .LVU206
+ 320:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -RT_ERROR;
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 24
+
+
+ 684              		.loc 1 320 8 is_stmt 0 view .LVU207
+ 685 0026 0746     		mov	r7, r0
+ 686 0028 98B1     		cbz	r0, .L62
+ 324:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     argc = msh_split(cmd, length, argv);
+ 687              		.loc 1 324 5 is_stmt 1 view .LVU208
+ 688 002a 2022     		movs	r2, #32
+ 689 002c 0021     		movs	r1, #0
+ 690 002e 6846     		mov	r0, sp
+ 691              	.LVL63:
+ 324:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     argc = msh_split(cmd, length, argv);
+ 692              		.loc 1 324 5 is_stmt 0 view .LVU209
+ 693 0030 FFF7FEFF 		bl	memset
+ 694              	.LVL64:
+ 325:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (argc == 0)
+ 695              		.loc 1 325 5 is_stmt 1 view .LVU210
+ 325:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (argc == 0)
+ 696              		.loc 1 325 12 is_stmt 0 view .LVU211
+ 697 0034 6A46     		mov	r2, sp
+ 698 0036 2946     		mov	r1, r5
+ 699 0038 2046     		mov	r0, r4
+ 700 003a FFF7FEFF 		bl	msh_split
+ 701              	.LVL65:
+ 326:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -RT_ERROR;
+ 702              		.loc 1 326 5 is_stmt 1 view .LVU212
+ 326:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return -RT_ERROR;
+ 703              		.loc 1 326 8 is_stmt 0 view .LVU213
+ 704 003e 58B1     		cbz	r0, .L63
+ 330:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return 0;
+ 705              		.loc 1 330 5 is_stmt 1 view .LVU214
+ 330:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return 0;
+ 706              		.loc 1 330 13 is_stmt 0 view .LVU215
+ 707 0040 6946     		mov	r1, sp
+ 708 0042 B847     		blx	r7
+ 709              	.LVL66:
+ 330:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return 0;
+ 710              		.loc 1 330 11 view .LVU216
+ 711 0044 3060     		str	r0, [r6]
+ 331:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 712              		.loc 1 331 5 is_stmt 1 view .LVU217
+ 331:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 713              		.loc 1 331 12 is_stmt 0 view .LVU218
+ 714 0046 0020     		movs	r0, #0
+ 715              	.LVL67:
+ 716              	.L56:
+ 332:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 717              		.loc 1 332 1 view .LVU219
+ 718 0048 09B0     		add	sp, sp, #36
+ 719              	.LCFI9:
+ 720              		.cfi_remember_state
+ 721              		.cfi_def_cfa_offset 20
+ 722              		@ sp needed
+ 723 004a F0BD     		pop	{r4, r5, r6, r7, pc}
+ 724              	.LVL68:
+ 725              	.L61:
+ 726              	.LCFI10:
+ 727              		.cfi_restore_state
+ 317:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 25
+
+
+ 728              		.loc 1 317 16 view .LVU220
+ 729 004c 4FF0FF30 		mov	r0, #-1
+ 730              	.LVL69:
+ 317:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 731              		.loc 1 317 16 view .LVU221
+ 732 0050 FAE7     		b	.L56
+ 733              	.LVL70:
+ 734              	.L62:
+ 321:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 735              		.loc 1 321 16 view .LVU222
+ 736 0052 4FF0FF30 		mov	r0, #-1
+ 737              	.LVL71:
+ 321:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 738              		.loc 1 321 16 view .LVU223
+ 739 0056 F7E7     		b	.L56
+ 740              	.LVL72:
+ 741              	.L63:
+ 327:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 742              		.loc 1 327 16 view .LVU224
+ 743 0058 4FF0FF30 		mov	r0, #-1
+ 744              	.LVL73:
+ 327:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 745              		.loc 1 327 16 view .LVU225
+ 746 005c F4E7     		b	.L56
+ 747              		.cfi_endproc
+ 748              	.LFE24:
+ 750              		.section	.text.msh_is_used,"ax",%progbits
+ 751              		.align	1
+ 752              		.global	msh_is_used
+ 753              		.syntax unified
+ 754              		.thumb
+ 755              		.thumb_func
+ 756              		.fpu softvfp
+ 758              	msh_is_used:
+ 759              	.LFB18:
+  37:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return RT_TRUE;
+ 760              		.loc 1 37 1 is_stmt 1 view -0
+ 761              		.cfi_startproc
+ 762              		@ args = 0, pretend = 0, frame = 0
+ 763              		@ frame_needed = 0, uses_anonymous_args = 0
+ 764              		@ link register save eliminated.
+  38:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 765              		.loc 1 38 5 view .LVU227
+  39:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #else
+ 766              		.loc 1 39 1 is_stmt 0 view .LVU228
+ 767 0000 0120     		movs	r0, #1
+ 768 0002 7047     		bx	lr
+ 769              		.cfi_endproc
+ 770              	.LFE18:
+ 772              		.section	.rodata.msh_exec.str1.4,"aMS",%progbits,1
+ 773              		.align	2
+ 774              	.LC5:
+ 775 0000 25733A20 		.ascii	"%s: command not found.\012\000"
+ 775      636F6D6D 
+ 775      616E6420 
+ 775      6E6F7420 
+ 775      666F756E 
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 26
+
+
+ 776              		.section	.text.msh_exec,"ax",%progbits
+ 777              		.align	1
+ 778              		.global	msh_exec
+ 779              		.syntax unified
+ 780              		.thumb
+ 781              		.thumb_func
+ 782              		.fpu softvfp
+ 784              	msh_exec:
+ 785              	.LVL74:
+ 786              	.LFB25:
+ 373:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int cmd_ret;
+ 787              		.loc 1 373 1 is_stmt 1 view -0
+ 788              		.cfi_startproc
+ 789              		@ args = 0, pretend = 0, frame = 8
+ 790              		@ frame_needed = 0, uses_anonymous_args = 0
+ 373:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int cmd_ret;
+ 791              		.loc 1 373 1 is_stmt 0 view .LVU230
+ 792 0000 10B5     		push	{r4, lr}
+ 793              	.LCFI11:
+ 794              		.cfi_def_cfa_offset 8
+ 795              		.cfi_offset 4, -8
+ 796              		.cfi_offset 14, -4
+ 797 0002 82B0     		sub	sp, sp, #8
+ 798              	.LCFI12:
+ 799              		.cfi_def_cfa_offset 16
+ 800 0004 0446     		mov	r4, r0
+ 374:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 801              		.loc 1 374 5 is_stmt 1 view .LVU231
+ 377:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 802              		.loc 1 377 5 view .LVU232
+ 377:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 803              		.loc 1 377 11 is_stmt 0 view .LVU233
+ 804 0006 01E0     		b	.L67
+ 805              	.LVL75:
+ 806              	.L68:
+ 379:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         length--;
+ 807              		.loc 1 379 9 is_stmt 1 view .LVU234
+ 379:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         length--;
+ 808              		.loc 1 379 12 is_stmt 0 view .LVU235
+ 809 0008 0134     		adds	r4, r4, #1
+ 810              	.LVL76:
+ 380:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 811              		.loc 1 380 9 is_stmt 1 view .LVU236
+ 380:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 812              		.loc 1 380 15 is_stmt 0 view .LVU237
+ 813 000a 0139     		subs	r1, r1, #1
+ 814              	.LVL77:
+ 815              	.L67:
+ 377:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 816              		.loc 1 377 11 is_stmt 1 view .LVU238
+ 377:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 817              		.loc 1 377 12 is_stmt 0 view .LVU239
+ 818 000c 2378     		ldrb	r3, [r4]	@ zero_extendqisi2
+ 377:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 819              		.loc 1 377 11 view .LVU240
+ 820 000e 202B     		cmp	r3, #32
+ 821 0010 FAD0     		beq	.L68
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 27
+
+
+ 377:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 822              		.loc 1 377 25 discriminator 1 view .LVU241
+ 823 0012 092B     		cmp	r3, #9
+ 824 0014 F8D0     		beq	.L68
+ 383:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return 0;
+ 825              		.loc 1 383 5 is_stmt 1 view .LVU242
+ 383:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return 0;
+ 826              		.loc 1 383 8 is_stmt 0 view .LVU243
+ 827 0016 11B9     		cbnz	r1, .L76
+ 384:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 828              		.loc 1 384 16 view .LVU244
+ 829 0018 0020     		movs	r0, #0
+ 830              	.LVL78:
+ 831              	.L66:
+ 429:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 832              		.loc 1 429 1 view .LVU245
+ 833 001a 02B0     		add	sp, sp, #8
+ 834              	.LCFI13:
+ 835              		.cfi_remember_state
+ 836              		.cfi_def_cfa_offset 8
+ 837              		@ sp needed
+ 838 001c 10BD     		pop	{r4, pc}
+ 839              	.LVL79:
+ 840              	.L76:
+ 841              	.LCFI14:
+ 842              		.cfi_restore_state
+ 390:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 843              		.loc 1 390 5 is_stmt 1 view .LVU246
+ 390:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 844              		.loc 1 390 9 is_stmt 0 view .LVU247
+ 845 001e 01AA     		add	r2, sp, #4
+ 846 0020 2046     		mov	r0, r4
+ 847 0022 FFF7FEFF 		bl	_msh_exec_cmd
+ 848              	.LVL80:
+ 390:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 849              		.loc 1 390 8 view .LVU248
+ 850 0026 80B9     		cbnz	r0, .L74
+ 392:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 851              		.loc 1 392 9 is_stmt 1 view .LVU249
+ 392:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 852              		.loc 1 392 16 is_stmt 0 view .LVU250
+ 853 0028 0198     		ldr	r0, [sp, #4]
+ 854 002a F6E7     		b	.L66
+ 855              	.LVL81:
+ 856              	.L72:
+ 857              	.LBB3:
+ 423:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 858              		.loc 1 423 13 is_stmt 1 view .LVU251
+ 423:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 859              		.loc 1 423 17 is_stmt 0 view .LVU252
+ 860 002c 0133     		adds	r3, r3, #1
+ 861              	.LVL82:
+ 862              	.L70:
+ 421:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 863              		.loc 1 421 15 is_stmt 1 view .LVU253
+ 421:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 864              		.loc 1 421 16 is_stmt 0 view .LVU254
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 28
+
+
+ 865 002e 1A78     		ldrb	r2, [r3]	@ zero_extendqisi2
+ 421:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 866              		.loc 1 421 15 view .LVU255
+ 867 0030 202A     		cmp	r2, #32
+ 868 0032 01D0     		beq	.L71
+ 421:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 869              		.loc 1 421 29 discriminator 1 view .LVU256
+ 870 0034 002A     		cmp	r2, #0
+ 871 0036 F9D1     		bne	.L72
+ 872              	.L71:
+ 425:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 873              		.loc 1 425 9 is_stmt 1 view .LVU257
+ 425:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 874              		.loc 1 425 15 is_stmt 0 view .LVU258
+ 875 0038 0022     		movs	r2, #0
+ 876 003a 1A70     		strb	r2, [r3]
+ 877              	.LBE3:
+ 427:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return -1;
+ 878              		.loc 1 427 5 is_stmt 1 view .LVU259
+ 879 003c 2146     		mov	r1, r4
+ 880 003e 0448     		ldr	r0, .L77
+ 881 0040 FFF7FEFF 		bl	rt_kprintf
+ 882              	.LVL83:
+ 428:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 883              		.loc 1 428 5 view .LVU260
+ 428:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 884              		.loc 1 428 12 is_stmt 0 view .LVU261
+ 885 0044 4FF0FF30 		mov	r0, #-1
+ 886 0048 E7E7     		b	.L66
+ 887              	.L74:
+ 888              	.LBB4:
+ 420:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         while (*tcmd != ' ' && *tcmd != '\0')
+ 889              		.loc 1 420 14 view .LVU262
+ 890 004a 2346     		mov	r3, r4
+ 891 004c EFE7     		b	.L70
+ 892              	.L78:
+ 893 004e 00BF     		.align	2
+ 894              	.L77:
+ 895 0050 00000000 		.word	.LC5
+ 896              	.LBE4:
+ 897              		.cfi_endproc
+ 898              	.LFE25:
+ 900              		.section	.rodata.msh_auto_complete.str1.4,"aMS",%progbits,1
+ 901              		.align	2
+ 902              	.LC6:
+ 903 0000 25730A00 		.ascii	"%s\012\000"
+ 904              		.section	.text.msh_auto_complete,"ax",%progbits
+ 905              		.align	1
+ 906              		.global	msh_auto_complete
+ 907              		.syntax unified
+ 908              		.thumb
+ 909              		.thumb_func
+ 910              		.fpu softvfp
+ 912              	msh_auto_complete:
+ 913              	.LVL84:
+ 914              	.LFB27:
+ 443:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 29
+
+
+ 444:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef RT_USING_DFS
+ 445:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** void msh_auto_complete_path(char *path)
+ 446:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+ 447:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     DIR *dir = RT_NULL;
+ 448:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     struct dirent *dirent = RT_NULL;
+ 449:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     char *full_path, *ptr, *index;
+ 450:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 451:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (!path)
+ 452:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return;
+ 453:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 454:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     full_path = (char *)rt_malloc(256);
+ 455:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (full_path == RT_NULL) return; /* out of memory */
+ 456:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 457:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (*path != '/')
+ 458:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 459:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         getcwd(full_path, 256);
+ 460:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (full_path[rt_strlen(full_path) - 1]  != '/')
+ 461:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             strcat(full_path, "/");
+ 462:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 463:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     else *full_path = '\0';
+ 464:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 465:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     index = RT_NULL;
+ 466:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     ptr = path;
+ 467:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     for (;;)
+ 468:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 469:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (*ptr == '/') index = ptr + 1;
+ 470:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (!*ptr) break;
+ 471:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 472:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         ptr ++;
+ 473:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 474:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (index == RT_NULL) index = path;
+ 475:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 476:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (index != RT_NULL)
+ 477:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 478:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         char *dest = index;
+ 479:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 480:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         /* fill the parent path */
+ 481:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         ptr = full_path;
+ 482:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         while (*ptr) ptr ++;
+ 483:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 484:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         for (index = path; index != dest;)
+ 485:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             *ptr++ = *index++;
+ 486:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         *ptr = '\0';
+ 487:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 488:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         dir = opendir(full_path);
+ 489:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (dir == RT_NULL) /* open directory failed! */
+ 490:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 491:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             rt_free(full_path);
+ 492:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             return;
+ 493:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 494:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 495:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         /* restore the index position */
+ 496:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         index = dest;
+ 497:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 498:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 499:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* auto complete the file or directory name */
+ 500:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (*index == '\0') /* display all of files and directories */
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 30
+
+
+ 501:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 502:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         for (;;)
+ 503:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 504:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             dirent = readdir(dir);
+ 505:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (dirent == RT_NULL) break;
+ 506:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 507:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             rt_kprintf("%s\n", dirent->d_name);
+ 508:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 509:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 510:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     else
+ 511:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 512:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         rt_size_t length, min_length;
+ 513:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 514:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         min_length = 0;
+ 515:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         for (;;)
+ 516:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 517:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             dirent = readdir(dir);
+ 518:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (dirent == RT_NULL) break;
+ 519:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 520:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             /* matched the prefix string */
+ 521:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (strncmp(index, dirent->d_name, rt_strlen(index)) == 0)
+ 522:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 523:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 if (min_length == 0)
+ 524:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 {
+ 525:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     min_length = rt_strlen(dirent->d_name);
+ 526:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     /* save dirent name */
+ 527:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     strcpy(full_path, dirent->d_name);
+ 528:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 }
+ 529:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 530:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 length = str_common(dirent->d_name, full_path);
+ 531:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 532:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 if (length < min_length)
+ 533:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 {
+ 534:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     min_length = length;
+ 535:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 }
+ 536:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 537:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 538:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 539:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (min_length)
+ 540:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 541:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (min_length < rt_strlen(full_path))
+ 542:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 543:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 /* list the candidate */
+ 544:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 rewinddir(dir);
+ 545:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 546:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 for (;;)
+ 547:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 {
+ 548:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     dirent = readdir(dir);
+ 549:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     if (dirent == RT_NULL) break;
+ 550:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 551:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     if (strncmp(index, dirent->d_name, rt_strlen(index)) == 0)
+ 552:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                         rt_kprintf("%s\n", dirent->d_name);
+ 553:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 }
+ 554:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 555:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 556:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             length = index - path;
+ 557:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             memcpy(index, full_path, min_length);
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 31
+
+
+ 558:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             path[length + min_length] = '\0';
+ 559:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 560:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 561:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 562:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     closedir(dir);
+ 563:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     rt_free(full_path);
+ 564:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 565:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 566:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 567:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** void msh_auto_complete(char *prefix)
+ 568:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** {
+ 915              		.loc 1 568 1 is_stmt 1 view -0
+ 916              		.cfi_startproc
+ 917              		@ args = 0, pretend = 0, frame = 0
+ 918              		@ frame_needed = 0, uses_anonymous_args = 0
+ 919              		.loc 1 568 1 is_stmt 0 view .LVU264
+ 920 0000 2DE9F843 		push	{r3, r4, r5, r6, r7, r8, r9, lr}
+ 921              	.LCFI15:
+ 922              		.cfi_def_cfa_offset 32
+ 923              		.cfi_offset 3, -32
+ 924              		.cfi_offset 4, -28
+ 925              		.cfi_offset 5, -24
+ 926              		.cfi_offset 6, -20
+ 927              		.cfi_offset 7, -16
+ 928              		.cfi_offset 8, -12
+ 929              		.cfi_offset 9, -8
+ 930              		.cfi_offset 14, -4
+ 569:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     int length, min_length;
+ 931              		.loc 1 569 5 is_stmt 1 view .LVU265
+ 570:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     const char *name_ptr, *cmd_name;
+ 932              		.loc 1 570 5 view .LVU266
+ 571:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     struct finsh_syscall *index;
+ 933              		.loc 1 571 5 view .LVU267
+ 572:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 573:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     min_length = 0;
+ 934              		.loc 1 573 5 view .LVU268
+ 935              	.LVL85:
+ 574:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     name_ptr = RT_NULL;
+ 936              		.loc 1 574 5 view .LVU269
+ 575:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 576:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (*prefix == '\0')
+ 937              		.loc 1 576 5 view .LVU270
+ 938              		.loc 1 576 9 is_stmt 0 view .LVU271
+ 939 0004 0378     		ldrb	r3, [r0]	@ zero_extendqisi2
+ 940              		.loc 1 576 8 view .LVU272
+ 941 0006 33B1     		cbz	r3, .L88
+ 942 0008 0646     		mov	r6, r0
+ 577:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 578:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         msh_help(0, RT_NULL);
+ 579:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return;
+ 580:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 581:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 582:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef RT_USING_DFS
+ 583:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* check whether a spare in the command */
+ 584:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 585:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         char *ptr;
+ 586:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 32
+
+
+ 587:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         ptr = prefix + rt_strlen(prefix);
+ 588:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         while (ptr != prefix)
+ 589:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 590:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (*ptr == ' ')
+ 591:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 592:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 msh_auto_complete_path(ptr + 1);
+ 593:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 break;
+ 594:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 595:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 596:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             ptr --;
+ 597:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 598:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #ifdef RT_USING_MODULE
+ 599:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         /* There is a chance that the user want to run the module directly. So
+ 600:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****          * try to complete the file names. If the completed path is not a
+ 601:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****          * module, the system won't crash anyway. */
+ 602:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         if (ptr == prefix)
+ 603:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 604:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             msh_auto_complete_path(ptr);
+ 605:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 606:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 607:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 608:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** #endif
+ 609:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 610:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* checks in internal command */
+ 611:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 612:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         for (index = _syscall_table_begin; index < _syscall_table_end; FINSH_NEXT_SYSCALL(index))
+ 943              		.loc 1 612 9 is_stmt 1 view .LVU273
+ 944              		.loc 1 612 20 is_stmt 0 view .LVU274
+ 945 000a 214B     		ldr	r3, .L90
+ 946 000c 1D68     		ldr	r5, [r3]
+ 947              	.LVL86:
+ 574:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 948              		.loc 1 574 14 view .LVU275
+ 949 000e 4FF00008 		mov	r8, #0
+ 573:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     name_ptr = RT_NULL;
+ 950              		.loc 1 573 16 view .LVU276
+ 951 0012 4746     		mov	r7, r8
+ 952              		.loc 1 612 9 view .LVU277
+ 953 0014 12E0     		b	.L82
+ 954              	.LVL87:
+ 955              	.L88:
+ 578:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return;
+ 956              		.loc 1 578 9 is_stmt 1 view .LVU278
+ 957 0016 0021     		movs	r1, #0
+ 958 0018 0846     		mov	r0, r1
+ 959              	.LVL88:
+ 578:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         return;
+ 960              		.loc 1 578 9 is_stmt 0 view .LVU279
+ 961 001a FFF7FEFF 		bl	msh_help
+ 962              	.LVL89:
+ 579:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 963              		.loc 1 579 9 is_stmt 1 view .LVU280
+ 964 001e 34E0     		b	.L79
+ 965              	.LVL90:
+ 966              	.L84:
+ 613:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 614:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             /* skip finsh shell function */
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 33
+
+
+ 615:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (strncmp(index->name, "__cmd_", 6) != 0) continue;
+ 616:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 617:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             cmd_name = (const char *) &index->name[6];
+ 618:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (strncmp(prefix, cmd_name, strlen(prefix)) == 0)
+ 619:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 620:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 if (min_length == 0)
+ 621:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 {
+ 622:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     /* set name_ptr */
+ 623:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     name_ptr = cmd_name;
+ 624:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     /* set initial length */
+ 625:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     min_length = strlen(name_ptr);
+ 626:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 }
+ 627:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 628:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 length = str_common(name_ptr, cmd_name);
+ 967              		.loc 1 628 17 view .LVU281
+ 968              		.loc 1 628 26 is_stmt 0 view .LVU282
+ 969 0020 2146     		mov	r1, r4
+ 970 0022 4046     		mov	r0, r8
+ 971 0024 FFF7FEFF 		bl	str_common
+ 972              	.LVL91:
+ 973 0028 8146     		mov	r9, r0
+ 974              	.LVL92:
+ 629:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 if (length < min_length)
+ 975              		.loc 1 629 17 is_stmt 1 view .LVU283
+ 976              		.loc 1 629 20 is_stmt 0 view .LVU284
+ 977 002a 8742     		cmp	r7, r0
+ 978 002c 00DC     		bgt	.L85
+ 979              		.loc 1 629 20 view .LVU285
+ 980 002e B946     		mov	r9, r7
+ 981              	.L85:
+ 982              	.LVL93:
+ 630:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     min_length = length;
+ 631:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 632:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 rt_kprintf("%s\n", cmd_name);
+ 983              		.loc 1 632 17 is_stmt 1 view .LVU286
+ 984 0030 2146     		mov	r1, r4
+ 985 0032 1848     		ldr	r0, .L90+4
+ 986              	.LVL94:
+ 987              		.loc 1 632 17 is_stmt 0 view .LVU287
+ 988 0034 FFF7FEFF 		bl	rt_kprintf
+ 989              	.LVL95:
+ 990 0038 4F46     		mov	r7, r9
+ 991              	.LVL96:
+ 992              	.L83:
+ 612:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 993              		.loc 1 612 72 is_stmt 1 discriminator 2 view .LVU288
+ 994 003a 0835     		adds	r5, r5, #8
+ 995              	.LVL97:
+ 996              	.L82:
+ 612:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 997              		.loc 1 612 44 discriminator 1 view .LVU289
+ 612:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 998              		.loc 1 612 50 is_stmt 0 discriminator 1 view .LVU290
+ 999 003c 164B     		ldr	r3, .L90+8
+ 1000 003e 1B68     		ldr	r3, [r3]
+ 612:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         {
+ 1001              		.loc 1 612 9 discriminator 1 view .LVU291
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 34
+
+
+ 1002 0040 AB42     		cmp	r3, r5
+ 1003 0042 1AD9     		bls	.L89
+ 615:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 1004              		.loc 1 615 13 is_stmt 1 view .LVU292
+ 615:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 1005              		.loc 1 615 17 is_stmt 0 view .LVU293
+ 1006 0044 2C68     		ldr	r4, [r5]
+ 1007 0046 0622     		movs	r2, #6
+ 1008 0048 1449     		ldr	r1, .L90+12
+ 1009 004a 2046     		mov	r0, r4
+ 1010 004c FFF7FEFF 		bl	strncmp
+ 1011              	.LVL98:
+ 615:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 1012              		.loc 1 615 16 view .LVU294
+ 1013 0050 0028     		cmp	r0, #0
+ 1014 0052 F2D1     		bne	.L83
+ 617:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (strncmp(prefix, cmd_name, strlen(prefix)) == 0)
+ 1015              		.loc 1 617 13 is_stmt 1 view .LVU295
+ 617:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             if (strncmp(prefix, cmd_name, strlen(prefix)) == 0)
+ 1016              		.loc 1 617 22 is_stmt 0 view .LVU296
+ 1017 0054 0634     		adds	r4, r4, #6
+ 1018              	.LVL99:
+ 618:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 1019              		.loc 1 618 13 is_stmt 1 view .LVU297
+ 618:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 1020              		.loc 1 618 17 is_stmt 0 view .LVU298
+ 1021 0056 3046     		mov	r0, r6
+ 1022 0058 FFF7FEFF 		bl	strlen
+ 1023              	.LVL100:
+ 1024 005c 0246     		mov	r2, r0
+ 1025 005e 2146     		mov	r1, r4
+ 1026 0060 3046     		mov	r0, r6
+ 1027 0062 FFF7FEFF 		bl	strncmp
+ 1028              	.LVL101:
+ 618:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             {
+ 1029              		.loc 1 618 16 view .LVU299
+ 1030 0066 0028     		cmp	r0, #0
+ 1031 0068 E7D1     		bne	.L83
+ 620:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 {
+ 1032              		.loc 1 620 17 is_stmt 1 view .LVU300
+ 620:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 {
+ 1033              		.loc 1 620 20 is_stmt 0 view .LVU301
+ 1034 006a 002F     		cmp	r7, #0
+ 1035 006c D8D1     		bne	.L84
+ 623:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     /* set initial length */
+ 1036              		.loc 1 623 21 is_stmt 1 view .LVU302
+ 1037              	.LVL102:
+ 625:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 }
+ 1038              		.loc 1 625 21 view .LVU303
+ 625:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 }
+ 1039              		.loc 1 625 34 is_stmt 0 view .LVU304
+ 1040 006e 2046     		mov	r0, r4
+ 1041 0070 FFF7FEFF 		bl	strlen
+ 1042              	.LVL103:
+ 625:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                 }
+ 1043              		.loc 1 625 32 view .LVU305
+ 1044 0074 0746     		mov	r7, r0
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 35
+
+
+ 1045              	.LVL104:
+ 623:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****                     /* set initial length */
+ 1046              		.loc 1 623 30 view .LVU306
+ 1047 0076 A046     		mov	r8, r4
+ 1048 0078 D2E7     		b	.L84
+ 1049              	.LVL105:
+ 1050              	.L89:
+ 633:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****             }
+ 634:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         }
+ 635:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 636:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 637:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     /* auto complete string */
+ 638:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     if (name_ptr != NULL)
+ 1051              		.loc 1 638 5 is_stmt 1 view .LVU307
+ 1052              		.loc 1 638 8 is_stmt 0 view .LVU308
+ 1053 007a B8F1000F 		cmp	r8, #0
+ 1054 007e 04D0     		beq	.L79
+ 639:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     {
+ 640:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****         rt_strncpy(prefix, name_ptr, min_length);
+ 1055              		.loc 1 640 9 is_stmt 1 view .LVU309
+ 1056 0080 3A46     		mov	r2, r7
+ 1057 0082 4146     		mov	r1, r8
+ 1058 0084 3046     		mov	r0, r6
+ 1059 0086 FFF7FEFF 		bl	rt_strncpy
+ 1060              	.LVL106:
+ 1061              	.L79:
+ 641:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     }
+ 642:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** 
+ 643:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c ****     return ;
+ 644:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/msh.c **** }
+ 1062              		.loc 1 644 1 is_stmt 0 view .LVU310
+ 1063 008a BDE8F883 		pop	{r3, r4, r5, r6, r7, r8, r9, pc}
+ 1064              	.L91:
+ 1065 008e 00BF     		.align	2
+ 1066              	.L90:
+ 1067 0090 00000000 		.word	_syscall_table_begin
+ 1068 0094 00000000 		.word	.LC6
+ 1069 0098 00000000 		.word	_syscall_table_end
+ 1070 009c 1C000000 		.word	.LC4
+ 1071              		.cfi_endproc
+ 1072              	.LFE27:
+ 1074              		.global	__fsym___cmd_free
+ 1075              		.global	__fsym___cmd_free_name
+ 1076              		.global	__fsym___cmd_ps
+ 1077              		.global	__fsym___cmd_ps_name
+ 1078              		.global	__fsym___cmd_help
+ 1079              		.global	__fsym___cmd_help_name
+ 1080              		.section	.rodata.__fsym___cmd_free_name,"a"
+ 1081              		.align	2
+ 1084              	__fsym___cmd_free_name:
+ 1085 0000 5F5F636D 		.ascii	"__cmd_free\000"
+ 1085      645F6672 
+ 1085      656500
+ 1086              		.section	.rodata.__fsym___cmd_help_name,"a"
+ 1087              		.align	2
+ 1090              	__fsym___cmd_help_name:
+ 1091 0000 5F5F636D 		.ascii	"__cmd_help\000"
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 36
+
+
+ 1091      645F6865 
+ 1091      6C7000
+ 1092              		.section	.rodata.__fsym___cmd_ps_name,"a"
+ 1093              		.align	2
+ 1096              	__fsym___cmd_ps_name:
+ 1097 0000 5F5F636D 		.ascii	"__cmd_ps\000"
+ 1097      645F7073 
+ 1097      00
+ 1098              		.section	FSymTab,"a"
+ 1099              		.align	2
+ 1102              	__fsym___cmd_free:
+ 1103 0000 00000000 		.word	__fsym___cmd_free_name
+ 1104 0004 00000000 		.word	cmd_free
+ 1107              	__fsym___cmd_ps:
+ 1108 0008 00000000 		.word	__fsym___cmd_ps_name
+ 1109 000c 00000000 		.word	cmd_ps
+ 1112              	__fsym___cmd_help:
+ 1113 0010 00000000 		.word	__fsym___cmd_help_name
+ 1114 0014 00000000 		.word	msh_help
+ 1115              		.text
+ 1116              	.Letext0:
+ 1117              		.file 2 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtdef.h"
+ 1118              		.file 3 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/finsh_api.h"
+ 1119              		.file 4 "d:\\work_project\\9 2019-q4-major\\arm-none-eabi\\include\\machine\\_default_types.h"
+ 1120              		.file 5 "d:\\work_project\\9 2019-q4-major\\arm-none-eabi\\include\\sys\\lock.h"
+ 1121              		.file 6 "d:\\work_project\\9 2019-q4-major\\arm-none-eabi\\include\\sys\\_types.h"
+ 1122              		.file 7 "d:\\work_project\\9 2019-q4-major\\lib\\gcc\\arm-none-eabi\\9.2.1\\include\\stddef.h"
+ 1123              		.file 8 "d:\\work_project\\9 2019-q4-major\\arm-none-eabi\\include\\sys\\reent.h"
+ 1124              		.file 9 "d:\\work_project\\9 2019-q4-major\\arm-none-eabi\\include\\sys\\_stdint.h"
+ 1125              		.file 10 "d:\\work_project\\9 2019-q4-major\\arm-none-eabi\\include\\ctype.h"
+ 1126              		.file 11 "d:\\work_project\\9 2019-q4-major\\arm-none-eabi\\include\\stdlib.h"
+ 1127              		.file 12 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/finsh.h"
+ 1128              		.file 13 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtthread.h"
+ 1129              		.file 14 "d:\\work_project\\9 2019-q4-major\\arm-none-eabi\\include\\string.h"
+ 1130              		.file 15 "<built-in>"
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s 			page 37
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 msh.c
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:16     .text.str_common:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:23     .text.str_common:00000000 str_common
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:92     .rodata.msh_split.str1.4:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:102    .text.msh_split:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:108    .text.msh_split:00000000 msh_split
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:338    .text.msh_split:000000ac $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:345    .rodata.msh_help.str1.4:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:352    .text.msh_help:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:359    .text.msh_help:00000000 msh_help
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:433    .text.msh_help:0000003c $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:443    .text.msh_get_cmd:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:449    .text.msh_get_cmd:00000000 msh_get_cmd
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:539    .text.msh_get_cmd:00000044 $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:546    .text.cmd_ps:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:553    .text.cmd_ps:00000000 cmd_ps
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:579    .text.cmd_free:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:586    .text.cmd_free:00000000 cmd_free
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:612    .text._msh_exec_cmd:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:618    .text._msh_exec_cmd:00000000 _msh_exec_cmd
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:751    .text.msh_is_used:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:758    .text.msh_is_used:00000000 msh_is_used
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:773    .rodata.msh_exec.str1.4:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:777    .text.msh_exec:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:784    .text.msh_exec:00000000 msh_exec
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:895    .text.msh_exec:00000050 $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:901    .rodata.msh_auto_complete.str1.4:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:905    .text.msh_auto_complete:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:912    .text.msh_auto_complete:00000000 msh_auto_complete
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:1067   .text.msh_auto_complete:00000090 $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:1102   FSymTab:00000000 __fsym___cmd_free
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:1084   .rodata.__fsym___cmd_free_name:00000000 __fsym___cmd_free_name
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:1107   FSymTab:00000008 __fsym___cmd_ps
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:1096   .rodata.__fsym___cmd_ps_name:00000000 __fsym___cmd_ps_name
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:1112   FSymTab:00000010 __fsym___cmd_help
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:1090   .rodata.__fsym___cmd_help_name:00000000 __fsym___cmd_help_name
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:1081   .rodata.__fsym___cmd_free_name:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:1087   .rodata.__fsym___cmd_help_name:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:1093   .rodata.__fsym___cmd_ps_name:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc5qapMD.s:1099   FSymTab:00000000 $d
+
+UNDEFINED SYMBOLS
+rt_kprintf
+strncmp
+_syscall_table_begin
+_syscall_table_end
+list_thread
+list_mem
+memset
+strlen
+rt_strncpy

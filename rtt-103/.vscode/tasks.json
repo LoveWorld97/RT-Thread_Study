@@ -1,0 +1,50 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "Build", //对应launch文件里的属性
+            "command": "make -j16", //编译指令
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "ReBuild", //对应launch文件里的属性
+            "command": "make clean; make -j10", //编译指令
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "Update", //对应launch文件里的属性
+            "command": "make -j16; make update", //编译指令
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "Clean", //对应launch文件里的属性
+            "command": "make clean", //编译指令
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "Reset", //对应launch文件里的属性
+            "command": "make reset", //编译指令
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": "build"
+        }
+    ]
+}

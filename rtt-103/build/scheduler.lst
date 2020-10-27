@@ -1,0 +1,1298 @@
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 1
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"scheduler.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.section	.text.rt_system_scheduler_init,"ax",%progbits
+  16              		.align	1
+  17              		.global	rt_system_scheduler_init
+  18              		.arch armv7-m
+  19              		.syntax unified
+  20              		.thumb
+  21              		.thumb_func
+  22              		.fpu softvfp
+  24              	rt_system_scheduler_init:
+  25              	.LFB15:
+  26              		.file 1 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c"
+   1:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /*
+   2:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * Copyright (c) 2006-2018, RT-Thread Development Team
+   3:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  *
+   4:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * SPDX-License-Identifier: Apache-2.0
+   5:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  *
+   6:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * Change Logs:
+   7:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * Date           Author       Notes
+   8:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2006-03-17     Bernard      the first version
+   9:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2006-04-28     Bernard      fix the scheduler algorthm
+  10:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2006-04-30     Bernard      add SCHEDULER_DEBUG
+  11:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2006-05-27     Bernard      fix the scheduler algorthm for same priority
+  12:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  *                             thread schedule
+  13:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2006-06-04     Bernard      rewrite the scheduler algorithm
+  14:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2006-08-03     Bernard      add hook support
+  15:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2006-09-05     Bernard      add 32 priority level support
+  16:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2006-09-24     Bernard      add rt_system_scheduler_start function
+  17:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2009-09-16     Bernard      fix _rt_scheduler_stack_check
+  18:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2010-04-11     yi.qiu       add module feature
+  19:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2010-07-13     Bernard      fix the maximal number of rt_scheduler_lock_nest
+  20:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  *                             issue found by kuronca
+  21:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2010-12-13     Bernard      add defunct list initialization even if not use heap.
+  22:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2011-05-10     Bernard      clean scheduler debug log.
+  23:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * 2013-12-21     Grissiom     add rt_critical_level
+  24:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+  25:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  26:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #include <rtthread.h>
+  27:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #include <rthw.h>
+  28:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  29:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** static rt_int16_t rt_scheduler_lock_nest;
+  30:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** extern volatile rt_uint8_t rt_interrupt_nest;
+  31:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  32:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** rt_list_t rt_thread_priority_table[RT_THREAD_PRIORITY_MAX];
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 2
+
+
+  33:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** struct rt_thread *rt_current_thread;
+  34:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  35:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** rt_uint8_t rt_current_priority;
+  36:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  37:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #if RT_THREAD_PRIORITY_MAX > 32
+  38:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /* Maximum priority level, 256 */
+  39:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** rt_uint32_t rt_thread_ready_priority_group;
+  40:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** rt_uint8_t rt_thread_ready_table[32];
+  41:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #else
+  42:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /* Maximum priority level, 32 */
+  43:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** rt_uint32_t rt_thread_ready_priority_group;
+  44:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+  45:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  46:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** rt_list_t rt_thread_defunct;
+  47:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  48:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #ifdef RT_USING_HOOK
+  49:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** static void (*rt_scheduler_hook)(struct rt_thread *from, struct rt_thread *to);
+  50:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  51:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**
+  52:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * @addtogroup Hook
+  53:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+  54:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  55:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**@{*/
+  56:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  57:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**
+  58:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * This function will set a hook function, which will be invoked when thread
+  59:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * switch happens.
+  60:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  *
+  61:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * @param hook the hook function
+  62:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+  63:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** void
+  64:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** rt_scheduler_sethook(void (*hook)(struct rt_thread *from, struct rt_thread *to))
+  65:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** {
+  66:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_scheduler_hook = hook;
+  67:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** }
+  68:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  69:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**@}*/
+  70:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+  71:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  72:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #ifdef RT_USING_OVERFLOW_CHECK
+  73:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** static void _rt_scheduler_stack_check(struct rt_thread *thread)
+  74:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** {
+  75:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     RT_ASSERT(thread != RT_NULL);
+  76:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  77:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #if defined(ARCH_CPU_STACK_GROWS_UPWARD)
+  78:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 	if (*((rt_uint8_t *)((rt_ubase_t)thread->stack_addr + thread->stack_size - 1)) != '#' ||
+  79:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #else
+  80:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     if (*((rt_uint8_t *)thread->stack_addr) != '#' ||
+  81:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+  82:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         (rt_uint32_t)thread->sp <= (rt_uint32_t)thread->stack_addr ||
+  83:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         (rt_uint32_t)thread->sp >
+  84:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         (rt_uint32_t)thread->stack_addr + (rt_uint32_t)thread->stack_size)
+  85:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     {
+  86:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         rt_uint32_t level;
+  87:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+  88:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         rt_kprintf("thread:%s stack overflow\n", thread->name);
+  89:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #ifdef RT_USING_FINSH
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 3
+
+
+  90:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         {
+  91:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             extern long list_thread(void);
+  92:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             list_thread();
+  93:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         }
+  94:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+  95:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         level = rt_hw_interrupt_disable();
+  96:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         while (level);
+  97:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     }
+  98:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #if defined(ARCH_CPU_STACK_GROWS_UPWARD)
+  99:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     else if ((rt_uint32_t)thread->sp > ((rt_uint32_t)thread->stack_addr + thread->stack_size))
+ 100:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     {
+ 101:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         rt_kprintf("warning: %s stack is close to the top of stack address.\n",
+ 102:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                    thread->name);
+ 103:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     }
+ 104:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #else
+ 105:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     else if ((rt_uint32_t)thread->sp <= ((rt_uint32_t)thread->stack_addr + 32))
+ 106:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     {
+ 107:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         rt_kprintf("warning: %s stack is close to the bottom of stack address.\n",
+ 108:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                    thread->name);
+ 109:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     }
+ 110:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 111:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** }
+ 112:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 113:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 114:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**
+ 115:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * @ingroup SystemInit
+ 116:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * This function will initialize the system scheduler
+ 117:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+ 118:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** void rt_system_scheduler_init(void)
+ 119:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** {
+  27              		.loc 1 119 1 view -0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+ 120:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     register rt_base_t offset;
+  32              		.loc 1 120 5 view .LVU1
+ 121:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 122:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_scheduler_lock_nest = 0;
+  33              		.loc 1 122 5 view .LVU2
+  34              		.loc 1 122 28 is_stmt 0 view .LVU3
+  35 0000 0023     		movs	r3, #0
+  36 0002 0C4A     		ldr	r2, .L5
+  37 0004 1380     		strh	r3, [r2]	@ movhi
+ 123:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 124:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     RT_DEBUG_LOG(RT_DEBUG_SCHEDULER, ("start scheduler: max priority 0x%02x\n",
+ 125:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                                       RT_THREAD_PRIORITY_MAX));
+  38              		.loc 1 125 63 is_stmt 1 view .LVU4
+ 126:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 127:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     for (offset = 0; offset < RT_THREAD_PRIORITY_MAX; offset ++)
+  39              		.loc 1 127 5 view .LVU5
+  40              	.LVL0:
+  41              	.L2:
+  42              		.loc 1 127 22 discriminator 1 view .LVU6
+  43              		.loc 1 127 5 is_stmt 0 discriminator 1 view .LVU7
+  44 0006 1F2B     		cmp	r3, #31
+  45 0008 07DC     		bgt	.L4
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 4
+
+
+ 128:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     {
+ 129:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         rt_list_init(&rt_thread_priority_table[offset]);
+  46              		.loc 1 129 9 is_stmt 1 discriminator 3 view .LVU8
+  47 000a 0B49     		ldr	r1, .L5+4
+  48 000c 01EBC302 		add	r2, r1, r3, lsl #3
+  49              	.LVL1:
+  50              	.LBB12:
+  51              	.LBI12:
+  52              		.file 2 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h"
+   1:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /*
+   2:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * Copyright (c) 2006-2018, RT-Thread Development Team
+   3:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *
+   4:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * SPDX-License-Identifier: Apache-2.0
+   5:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *
+   6:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * Change Logs:
+   7:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * Date           Author       Notes
+   8:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * 2006-03-16     Bernard      the first version
+   9:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * 2006-09-07     Bernard      move the kservice APIs to rtthread.h
+  10:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * 2007-06-27     Bernard      fix the rt_list_remove bug
+  11:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * 2012-03-22     Bernard      rename kservice.h to rtservice.h
+  12:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * 2017-11-15     JasonJia     Modify rt_slist_foreach to rt_slist_for_each_entry.
+  13:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *                             Make code cleanup.
+  14:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  15:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  16:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #ifndef __RT_SERVICE_H__
+  17:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #define __RT_SERVICE_H__
+  18:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  19:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #ifdef __cplusplus
+  20:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** extern "C" {
+  21:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #endif
+  22:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  23:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  24:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @addtogroup KernelService
+  25:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  26:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  27:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**@{*/
+  28:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  29:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  30:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * rt_container_of - return the member address of ptr, if the type of ptr is the
+  31:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * struct type.
+  32:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  33:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #define rt_container_of(ptr, type, member) \
+  34:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     ((type *)((char *)(ptr) - (unsigned long)(&((type *)0)->member)))
+  35:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  36:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  37:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  38:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @brief initialize a list object
+  39:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  40:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** #define RT_LIST_OBJECT_INIT(object) { &(object), &(object) }
+  41:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  42:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  43:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @brief initialize a list
+  44:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *
+  45:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param l list to be initialized
+  46:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  47:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** rt_inline void rt_list_init(rt_list_t *l)
+  53              		.loc 2 47 16 discriminator 3 view .LVU9
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 5
+
+
+  54              	.LBB13:
+  48:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+  49:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     l->next = l->prev = l;
+  55              		.loc 2 49 5 discriminator 3 view .LVU10
+  56              		.loc 2 49 23 is_stmt 0 discriminator 3 view .LVU11
+  57 0010 5260     		str	r2, [r2, #4]
+  58              		.loc 2 49 13 discriminator 3 view .LVU12
+  59 0012 41F83320 		str	r2, [r1, r3, lsl #3]
+  60              	.LVL2:
+  61              		.loc 2 49 13 discriminator 3 view .LVU13
+  62              	.LBE13:
+  63              	.LBE12:
+ 127:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     {
+  64              		.loc 1 127 55 is_stmt 1 discriminator 3 view .LVU14
+ 127:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     {
+  65              		.loc 1 127 62 is_stmt 0 discriminator 3 view .LVU15
+  66 0016 0133     		adds	r3, r3, #1
+  67              	.LVL3:
+ 127:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     {
+  68              		.loc 1 127 62 discriminator 3 view .LVU16
+  69 0018 F5E7     		b	.L2
+  70              	.L4:
+ 130:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     }
+ 131:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 132:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_current_priority = RT_THREAD_PRIORITY_MAX - 1;
+  71              		.loc 1 132 5 is_stmt 1 view .LVU17
+  72              		.loc 1 132 25 is_stmt 0 view .LVU18
+  73 001a 084B     		ldr	r3, .L5+8
+  74              	.LVL4:
+  75              		.loc 1 132 25 view .LVU19
+  76 001c 1F22     		movs	r2, #31
+  77 001e 1A70     		strb	r2, [r3]
+ 133:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_current_thread = RT_NULL;
+  78              		.loc 1 133 5 is_stmt 1 view .LVU20
+  79              		.loc 1 133 23 is_stmt 0 view .LVU21
+  80 0020 0023     		movs	r3, #0
+  81 0022 074A     		ldr	r2, .L5+12
+  82 0024 1360     		str	r3, [r2]
+ 134:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 135:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* initialize ready priority group */
+ 136:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_thread_ready_priority_group = 0;
+  83              		.loc 1 136 5 is_stmt 1 view .LVU22
+  84              		.loc 1 136 36 is_stmt 0 view .LVU23
+  85 0026 074A     		ldr	r2, .L5+16
+  86 0028 1360     		str	r3, [r2]
+ 137:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 138:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #if RT_THREAD_PRIORITY_MAX > 32
+ 139:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* initialize ready table */
+ 140:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_memset(rt_thread_ready_table, 0, sizeof(rt_thread_ready_table));
+ 141:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 142:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 143:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* initialize thread defunct */
+ 144:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_list_init(&rt_thread_defunct);
+  87              		.loc 1 144 5 is_stmt 1 view .LVU24
+  88              	.LVL5:
+  89              	.LBB14:
+  90              	.LBI14:
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 6
+
+
+  47:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+  91              		.loc 2 47 16 view .LVU25
+  92              	.LBB15:
+  93              		.loc 2 49 5 view .LVU26
+  94              		.loc 2 49 23 is_stmt 0 view .LVU27
+  95 002a 074B     		ldr	r3, .L5+20
+  96 002c 5B60     		str	r3, [r3, #4]
+  97              		.loc 2 49 13 view .LVU28
+  98 002e 1B60     		str	r3, [r3]
+  99              	.LVL6:
+ 100              		.loc 2 49 13 view .LVU29
+ 101              	.LBE15:
+ 102              	.LBE14:
+ 145:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** }
+ 103              		.loc 1 145 1 view .LVU30
+ 104 0030 7047     		bx	lr
+ 105              	.L6:
+ 106 0032 00BF     		.align	2
+ 107              	.L5:
+ 108 0034 00000000 		.word	.LANCHOR0
+ 109 0038 00000000 		.word	rt_thread_priority_table
+ 110 003c 00000000 		.word	rt_current_priority
+ 111 0040 00000000 		.word	rt_current_thread
+ 112 0044 00000000 		.word	rt_thread_ready_priority_group
+ 113 0048 00000000 		.word	rt_thread_defunct
+ 114              		.cfi_endproc
+ 115              	.LFE15:
+ 117              		.section	.text.rt_system_scheduler_start,"ax",%progbits
+ 118              		.align	1
+ 119              		.global	rt_system_scheduler_start
+ 120              		.syntax unified
+ 121              		.thumb
+ 122              		.thumb_func
+ 123              		.fpu softvfp
+ 125              	rt_system_scheduler_start:
+ 126              	.LFB16:
+ 146:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 147:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**
+ 148:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * @ingroup SystemInit
+ 149:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * This function will startup scheduler. It will select one thread
+ 150:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * with the highest priority level, then switch to it.
+ 151:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+ 152:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** void rt_system_scheduler_start(void)
+ 153:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** {
+ 127              		.loc 1 153 1 is_stmt 1 view -0
+ 128              		.cfi_startproc
+ 129              		@ args = 0, pretend = 0, frame = 0
+ 130              		@ frame_needed = 0, uses_anonymous_args = 0
+ 131 0000 08B5     		push	{r3, lr}
+ 132              	.LCFI0:
+ 133              		.cfi_def_cfa_offset 8
+ 134              		.cfi_offset 3, -8
+ 135              		.cfi_offset 14, -4
+ 154:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     register struct rt_thread *to_thread;
+ 136              		.loc 1 154 5 view .LVU32
+ 155:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     register rt_ubase_t highest_ready_priority;
+ 137              		.loc 1 155 5 view .LVU33
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 7
+
+
+ 156:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 157:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #if RT_THREAD_PRIORITY_MAX > 32
+ 158:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     register rt_ubase_t number;
+ 159:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 160:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     number = __rt_ffs(rt_thread_ready_priority_group) - 1;
+ 161:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     highest_ready_priority = (number << 3) + __rt_ffs(rt_thread_ready_table[number]) - 1;
+ 162:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #else
+ 163:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     highest_ready_priority = __rt_ffs(rt_thread_ready_priority_group) - 1;
+ 138              		.loc 1 163 5 view .LVU34
+ 139              		.loc 1 163 30 is_stmt 0 view .LVU35
+ 140 0002 084B     		ldr	r3, .L9
+ 141 0004 1868     		ldr	r0, [r3]
+ 142 0006 FFF7FEFF 		bl	__rt_ffs
+ 143              	.LVL7:
+ 144              		.loc 1 163 71 view .LVU36
+ 145 000a 0138     		subs	r0, r0, #1
+ 146              	.LVL8:
+ 164:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 165:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 166:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* get switch to thread */
+ 167:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     to_thread = rt_list_entry(rt_thread_priority_table[highest_ready_priority].next,
+ 147              		.loc 1 167 5 is_stmt 1 view .LVU37
+ 148              		.loc 1 167 17 is_stmt 0 view .LVU38
+ 149 000c 064B     		ldr	r3, .L9+4
+ 150 000e 53F83000 		ldr	r0, [r3, r0, lsl #3]
+ 151              	.LVL9:
+ 152              		.loc 1 167 15 view .LVU39
+ 153 0012 A0F11402 		sub	r2, r0, #20
+ 154              	.LVL10:
+ 168:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                               struct rt_thread,
+ 169:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                               tlist);
+ 170:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 171:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_current_thread = to_thread;
+ 155              		.loc 1 171 5 is_stmt 1 view .LVU40
+ 156              		.loc 1 171 23 is_stmt 0 view .LVU41
+ 157 0016 054B     		ldr	r3, .L9+8
+ 158 0018 1A60     		str	r2, [r3]
+ 172:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 173:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* switch to new thread */
+ 174:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_hw_context_switch_to((rt_uint32_t)&to_thread->sp);
+ 159              		.loc 1 174 5 is_stmt 1 view .LVU42
+ 160 001a 0830     		adds	r0, r0, #8
+ 161 001c FFF7FEFF 		bl	rt_hw_context_switch_to
+ 162              	.LVL11:
+ 175:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 176:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* never come back */
+ 177:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** }
+ 163              		.loc 1 177 1 is_stmt 0 view .LVU43
+ 164 0020 08BD     		pop	{r3, pc}
+ 165              	.L10:
+ 166 0022 00BF     		.align	2
+ 167              	.L9:
+ 168 0024 00000000 		.word	rt_thread_ready_priority_group
+ 169 0028 00000000 		.word	rt_thread_priority_table
+ 170 002c 00000000 		.word	rt_current_thread
+ 171              		.cfi_endproc
+ 172              	.LFE16:
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 8
+
+
+ 174              		.section	.text.rt_schedule,"ax",%progbits
+ 175              		.align	1
+ 176              		.global	rt_schedule
+ 177              		.syntax unified
+ 178              		.thumb
+ 179              		.thumb_func
+ 180              		.fpu softvfp
+ 182              	rt_schedule:
+ 183              	.LFB17:
+ 178:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 179:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**
+ 180:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * @addtogroup Thread
+ 181:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+ 182:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 183:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**@{*/
+ 184:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 185:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**
+ 186:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * This function will perform one schedule. It will select one thread
+ 187:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * with the highest priority level, then switch to it.
+ 188:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+ 189:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** void rt_schedule(void)
+ 190:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** {
+ 184              		.loc 1 190 1 is_stmt 1 view -0
+ 185              		.cfi_startproc
+ 186              		@ args = 0, pretend = 0, frame = 0
+ 187              		@ frame_needed = 0, uses_anonymous_args = 0
+ 188 0000 38B5     		push	{r3, r4, r5, lr}
+ 189              	.LCFI1:
+ 190              		.cfi_def_cfa_offset 16
+ 191              		.cfi_offset 3, -16
+ 192              		.cfi_offset 4, -12
+ 193              		.cfi_offset 5, -8
+ 194              		.cfi_offset 14, -4
+ 191:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_base_t level;
+ 195              		.loc 1 191 5 view .LVU45
+ 192:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     struct rt_thread *to_thread;
+ 196              		.loc 1 192 5 view .LVU46
+ 193:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     struct rt_thread *from_thread;
+ 197              		.loc 1 193 5 view .LVU47
+ 194:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 195:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* disable interrupt */
+ 196:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     level = rt_hw_interrupt_disable();
+ 198              		.loc 1 196 5 view .LVU48
+ 199              		.loc 1 196 13 is_stmt 0 view .LVU49
+ 200 0002 FFF7FEFF 		bl	rt_hw_interrupt_disable
+ 201              	.LVL12:
+ 202 0006 0446     		mov	r4, r0
+ 203              	.LVL13:
+ 197:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 198:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* check the scheduler is enabled or not */
+ 199:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     if (rt_scheduler_lock_nest == 0)
+ 204              		.loc 1 199 5 is_stmt 1 view .LVU50
+ 205              		.loc 1 199 32 is_stmt 0 view .LVU51
+ 206 0008 144B     		ldr	r3, .L17
+ 207 000a B3F90030 		ldrsh	r3, [r3]
+ 208              		.loc 1 199 8 view .LVU52
+ 209 000e C3B9     		cbnz	r3, .L12
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 9
+
+
+ 210              	.LBB16:
+ 200:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     {
+ 201:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         register rt_ubase_t highest_ready_priority;
+ 211              		.loc 1 201 9 is_stmt 1 view .LVU53
+ 202:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 203:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #if RT_THREAD_PRIORITY_MAX <= 32
+ 204:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         highest_ready_priority = __rt_ffs(rt_thread_ready_priority_group) - 1;
+ 212              		.loc 1 204 9 view .LVU54
+ 213              		.loc 1 204 34 is_stmt 0 view .LVU55
+ 214 0010 134B     		ldr	r3, .L17+4
+ 215 0012 1868     		ldr	r0, [r3]
+ 216              	.LVL14:
+ 217              		.loc 1 204 34 view .LVU56
+ 218 0014 FFF7FEFF 		bl	__rt_ffs
+ 219              	.LVL15:
+ 220              		.loc 1 204 75 view .LVU57
+ 221 0018 431E     		subs	r3, r0, #1
+ 222              	.LVL16:
+ 205:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #else
+ 206:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         register rt_ubase_t number;
+ 207:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 208:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         number = __rt_ffs(rt_thread_ready_priority_group) - 1;
+ 209:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         highest_ready_priority = (number << 3) + __rt_ffs(rt_thread_ready_table[number]) - 1;
+ 210:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 211:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 212:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         /* get switch to thread */
+ 213:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         to_thread = rt_list_entry(rt_thread_priority_table[highest_ready_priority].next,
+ 223              		.loc 1 213 9 is_stmt 1 view .LVU58
+ 224              		.loc 1 213 21 is_stmt 0 view .LVU59
+ 225 001a 124A     		ldr	r2, .L17+8
+ 226 001c 52F83310 		ldr	r1, [r2, r3, lsl #3]
+ 227              		.loc 1 213 19 view .LVU60
+ 228 0020 A1F11402 		sub	r2, r1, #20
+ 229              	.LVL17:
+ 214:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                                   struct rt_thread,
+ 215:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                                   tlist);
+ 216:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 217:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         /* if the destination thread is not the same as current thread */
+ 218:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         if (to_thread != rt_current_thread)
+ 230              		.loc 1 218 9 is_stmt 1 view .LVU61
+ 231              		.loc 1 218 23 is_stmt 0 view .LVU62
+ 232 0024 1048     		ldr	r0, .L17+12
+ 233 0026 0068     		ldr	r0, [r0]
+ 234              		.loc 1 218 12 view .LVU63
+ 235 0028 9042     		cmp	r0, r2
+ 236 002a 0AD0     		beq	.L12
+ 219:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         {
+ 220:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             rt_current_priority = (rt_uint8_t)highest_ready_priority;
+ 237              		.loc 1 220 13 is_stmt 1 view .LVU64
+ 238              		.loc 1 220 33 is_stmt 0 view .LVU65
+ 239 002c 0F4D     		ldr	r5, .L17+16
+ 240 002e 2B70     		strb	r3, [r5]
+ 221:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             from_thread         = rt_current_thread;
+ 241              		.loc 1 221 13 is_stmt 1 view .LVU66
+ 242              	.LVL18:
+ 222:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             rt_current_thread   = to_thread;
+ 243              		.loc 1 222 13 view .LVU67
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 10
+
+
+ 244              		.loc 1 222 33 is_stmt 0 view .LVU68
+ 245 0030 0D4B     		ldr	r3, .L17+12
+ 246              	.LVL19:
+ 247              		.loc 1 222 33 view .LVU69
+ 248 0032 1A60     		str	r2, [r3]
+ 223:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 224:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             RT_OBJECT_HOOK_CALL(rt_scheduler_hook, (from_thread, to_thread));
+ 249              		.loc 1 224 77 is_stmt 1 view .LVU70
+ 225:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 226:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             /* switch to new thread */
+ 227:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             RT_DEBUG_LOG(RT_DEBUG_SCHEDULER,
+ 228:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                          ("[%d]switch to priority#%d "
+ 229:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                           "thread:%.*s(sp:0x%p), "
+ 230:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                           "from thread:%.*s(sp: 0x%p)\n",
+ 231:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                           rt_interrupt_nest, highest_ready_priority,
+ 232:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                           RT_NAME_MAX, to_thread->name, to_thread->sp,
+ 233:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                           RT_NAME_MAX, from_thread->name, from_thread->sp));
+ 250              		.loc 1 233 76 view .LVU71
+ 234:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 235:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #ifdef RT_USING_OVERFLOW_CHECK
+ 236:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             _rt_scheduler_stack_check(to_thread);
+ 237:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 238:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 239:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             if (rt_interrupt_nest == 0)
+ 251              		.loc 1 239 13 view .LVU72
+ 252              		.loc 1 239 35 is_stmt 0 view .LVU73
+ 253 0034 0E4B     		ldr	r3, .L17+20
+ 254 0036 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 255              		.loc 1 239 16 view .LVU74
+ 256 0038 3BB1     		cbz	r3, .L16
+ 240:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             {
+ 241:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                 rt_hw_context_switch((rt_uint32_t)&from_thread->sp,
+ 242:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                                      (rt_uint32_t)&to_thread->sp);
+ 243:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 244:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #ifdef RT_USING_SIGNALS
+ 245:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                 if (rt_current_thread->stat & RT_THREAD_STAT_SIGNAL_PENDING)
+ 246:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                 {
+ 247:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                     extern void rt_thread_handle_sig(rt_bool_t clean_state);
+ 248:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 249:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                     rt_current_thread->stat &= ~RT_THREAD_STAT_SIGNAL_PENDING;
+ 250:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 251:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                     rt_hw_interrupt_enable(level);
+ 252:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 253:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                     /* check signal status */
+ 254:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                     rt_thread_handle_sig(RT_TRUE);
+ 255:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                 }
+ 256:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                 else
+ 257:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 258:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                 {
+ 259:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                     /* enable interrupt */
+ 260:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                     rt_hw_interrupt_enable(level);
+ 261:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                 }
+ 262:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 263:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                 return ;
+ 264:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             }
+ 265:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             else
+ 266:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             {
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 11
+
+
+ 267:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                 RT_DEBUG_LOG(RT_DEBUG_SCHEDULER, ("switch in interrupt\n"));
+ 257              		.loc 1 267 76 is_stmt 1 view .LVU75
+ 268:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 269:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                 rt_hw_context_switch_interrupt((rt_uint32_t)&from_thread->sp,
+ 258              		.loc 1 269 17 view .LVU76
+ 259 003a 0831     		adds	r1, r1, #8
+ 260 003c 1C30     		adds	r0, r0, #28
+ 261              	.LVL20:
+ 262              		.loc 1 269 17 is_stmt 0 view .LVU77
+ 263 003e FFF7FEFF 		bl	rt_hw_context_switch_interrupt
+ 264              	.LVL21:
+ 265              	.L12:
+ 266              		.loc 1 269 17 view .LVU78
+ 267              	.LBE16:
+ 270:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                                                (rt_uint32_t)&to_thread->sp);
+ 271:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             }
+ 272:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         }
+ 273:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     }
+ 274:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 275:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* enable interrupt */
+ 276:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_hw_interrupt_enable(level);
+ 268              		.loc 1 276 5 is_stmt 1 view .LVU79
+ 269 0042 2046     		mov	r0, r4
+ 270 0044 FFF7FEFF 		bl	rt_hw_interrupt_enable
+ 271              	.LVL22:
+ 272              	.L11:
+ 277:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** }
+ 273              		.loc 1 277 1 is_stmt 0 view .LVU80
+ 274 0048 38BD     		pop	{r3, r4, r5, pc}
+ 275              	.LVL23:
+ 276              	.L16:
+ 277              	.LBB17:
+ 241:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                                      (rt_uint32_t)&to_thread->sp);
+ 278              		.loc 1 241 17 is_stmt 1 view .LVU81
+ 279 004a 0831     		adds	r1, r1, #8
+ 280 004c 1C30     		adds	r0, r0, #28
+ 281              	.LVL24:
+ 241:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                                      (rt_uint32_t)&to_thread->sp);
+ 282              		.loc 1 241 17 is_stmt 0 view .LVU82
+ 283 004e FFF7FEFF 		bl	rt_hw_context_switch
+ 284              	.LVL25:
+ 260:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                 }
+ 285              		.loc 1 260 21 is_stmt 1 view .LVU83
+ 286 0052 2046     		mov	r0, r4
+ 287 0054 FFF7FEFF 		bl	rt_hw_interrupt_enable
+ 288              	.LVL26:
+ 263:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             }
+ 289              		.loc 1 263 17 view .LVU84
+ 290 0058 F6E7     		b	.L11
+ 291              	.L18:
+ 292 005a 00BF     		.align	2
+ 293              	.L17:
+ 294 005c 00000000 		.word	.LANCHOR0
+ 295 0060 00000000 		.word	rt_thread_ready_priority_group
+ 296 0064 00000000 		.word	rt_thread_priority_table
+ 297 0068 00000000 		.word	rt_current_thread
+ 298 006c 00000000 		.word	rt_current_priority
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 12
+
+
+ 299 0070 00000000 		.word	rt_interrupt_nest
+ 300              	.LBE17:
+ 301              		.cfi_endproc
+ 302              	.LFE17:
+ 304              		.section	.text.rt_schedule_insert_thread,"ax",%progbits
+ 305              		.align	1
+ 306              		.global	rt_schedule_insert_thread
+ 307              		.syntax unified
+ 308              		.thumb
+ 309              		.thumb_func
+ 310              		.fpu softvfp
+ 312              	rt_schedule_insert_thread:
+ 313              	.LVL27:
+ 314              	.LFB18:
+ 278:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 279:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /*
+ 280:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * This function will insert a thread to system ready queue. The state of
+ 281:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * thread will be set as READY and remove from suspend queue.
+ 282:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  *
+ 283:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * @param thread the thread to be inserted
+ 284:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * @note Please do not invoke this function in user application.
+ 285:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+ 286:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** void rt_schedule_insert_thread(struct rt_thread *thread)
+ 287:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** {
+ 315              		.loc 1 287 1 view -0
+ 316              		.cfi_startproc
+ 317              		@ args = 0, pretend = 0, frame = 0
+ 318              		@ frame_needed = 0, uses_anonymous_args = 0
+ 319              		.loc 1 287 1 is_stmt 0 view .LVU86
+ 320 0000 10B5     		push	{r4, lr}
+ 321              	.LCFI2:
+ 322              		.cfi_def_cfa_offset 8
+ 323              		.cfi_offset 4, -8
+ 324              		.cfi_offset 14, -4
+ 325 0002 0446     		mov	r4, r0
+ 288:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     register rt_base_t temp;
+ 326              		.loc 1 288 5 is_stmt 1 view .LVU87
+ 289:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 290:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     RT_ASSERT(thread != RT_NULL);
+ 327              		.loc 1 290 33 view .LVU88
+ 291:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 292:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* disable interrupt */
+ 293:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     temp = rt_hw_interrupt_disable();
+ 328              		.loc 1 293 5 view .LVU89
+ 329              		.loc 1 293 12 is_stmt 0 view .LVU90
+ 330 0004 FFF7FEFF 		bl	rt_hw_interrupt_disable
+ 331              	.LVL28:
+ 294:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 295:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* change stat */
+ 296:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     thread->stat = RT_THREAD_READY | (thread->stat & ~RT_THREAD_STAT_MASK);
+ 332              		.loc 1 296 5 is_stmt 1 view .LVU91
+ 333              		.loc 1 296 45 is_stmt 0 view .LVU92
+ 334 0008 94F93430 		ldrsb	r3, [r4, #52]
+ 335              		.loc 1 296 52 view .LVU93
+ 336 000c 23F00F03 		bic	r3, r3, #15
+ 337              		.loc 1 296 36 view .LVU94
+ 338 0010 43F00103 		orr	r3, r3, #1
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 13
+
+
+ 339              		.loc 1 296 18 view .LVU95
+ 340 0014 84F83430 		strb	r3, [r4, #52]
+ 297:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 298:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* insert thread to ready list */
+ 299:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_list_insert_before(&(rt_thread_priority_table[thread->current_priority]),
+ 341              		.loc 1 299 5 is_stmt 1 view .LVU96
+ 342              		.loc 1 299 60 is_stmt 0 view .LVU97
+ 343 0018 94F83520 		ldrb	r2, [r4, #53]	@ zero_extendqisi2
+ 344              		.loc 1 299 5 view .LVU98
+ 345 001c 094B     		ldr	r3, .L21
+ 346 001e 03EBC203 		add	r3, r3, r2, lsl #3
+ 347 0022 04F11402 		add	r2, r4, #20
+ 348              	.LVL29:
+ 349              	.LBB18:
+ 350              	.LBI18:
+  50:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** }
+  51:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  52:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  53:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @brief insert a node after a list
+  54:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *
+  55:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param l list to insert it
+  56:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param n new node to be inserted
+  57:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  58:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** rt_inline void rt_list_insert_after(rt_list_t *l, rt_list_t *n)
+  59:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+  60:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     l->next->prev = n;
+  61:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->next = l->next;
+  62:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  63:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     l->next = n;
+  64:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev = l;
+  65:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** }
+  66:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  67:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  68:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @brief insert a node before a list
+  69:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  *
+  70:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param n new node to be inserted
+  71:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param l list to insert it
+  72:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  73:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** rt_inline void rt_list_insert_before(rt_list_t *l, rt_list_t *n)
+ 351              		.loc 2 73 16 is_stmt 1 view .LVU99
+ 352              	.LBB19:
+  74:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+  75:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     l->prev->next = n;
+ 353              		.loc 2 75 5 view .LVU100
+ 354              		.loc 2 75 6 is_stmt 0 view .LVU101
+ 355 0026 5968     		ldr	r1, [r3, #4]
+ 356              		.loc 2 75 19 view .LVU102
+ 357 0028 0A60     		str	r2, [r1]
+  76:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev = l->prev;
+ 358              		.loc 2 76 5 is_stmt 1 view .LVU103
+ 359              		.loc 2 76 16 is_stmt 0 view .LVU104
+ 360 002a 5968     		ldr	r1, [r3, #4]
+ 361              		.loc 2 76 13 view .LVU105
+ 362 002c A161     		str	r1, [r4, #24]
+  77:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  78:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     l->prev = n;
+ 363              		.loc 2 78 5 is_stmt 1 view .LVU106
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 14
+
+
+ 364              		.loc 2 78 13 is_stmt 0 view .LVU107
+ 365 002e 5A60     		str	r2, [r3, #4]
+  79:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->next = l;
+ 366              		.loc 2 79 5 is_stmt 1 view .LVU108
+ 367              		.loc 2 79 13 is_stmt 0 view .LVU109
+ 368 0030 6361     		str	r3, [r4, #20]
+ 369              	.LVL30:
+ 370              		.loc 2 79 13 view .LVU110
+ 371              	.LBE19:
+ 372              	.LBE18:
+ 300:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                           &(thread->tlist));
+ 301:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 302:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* set priority mask */
+ 303:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #if RT_THREAD_PRIORITY_MAX <= 32
+ 304:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     RT_DEBUG_LOG(RT_DEBUG_SCHEDULER, ("insert thread[%.*s], the priority: %d\n",
+ 305:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                                       RT_NAME_MAX, thread->name, thread->current_priority));
+ 373              		.loc 1 305 92 is_stmt 1 view .LVU111
+ 306:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #else
+ 307:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     RT_DEBUG_LOG(RT_DEBUG_SCHEDULER,
+ 308:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                  ("insert thread[%.*s], the priority: %d 0x%x %d\n",
+ 309:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                   RT_NAME_MAX,
+ 310:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                   thread->name,
+ 311:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                   thread->number,
+ 312:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                   thread->number_mask,
+ 313:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                   thread->high_mask));
+ 314:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 315:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 316:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #if RT_THREAD_PRIORITY_MAX > 32
+ 317:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_thread_ready_table[thread->number] |= thread->high_mask;
+ 318:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 319:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_thread_ready_priority_group |= thread->number_mask;
+ 374              		.loc 1 319 5 view .LVU112
+ 375              		.loc 1 319 45 is_stmt 0 view .LVU113
+ 376 0032 A16B     		ldr	r1, [r4, #56]
+ 377              		.loc 1 319 36 view .LVU114
+ 378 0034 044A     		ldr	r2, .L21+4
+ 379 0036 1368     		ldr	r3, [r2]
+ 380 0038 0B43     		orrs	r3, r3, r1
+ 381 003a 1360     		str	r3, [r2]
+ 320:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 321:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* enable interrupt */
+ 322:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_hw_interrupt_enable(temp);
+ 382              		.loc 1 322 5 is_stmt 1 view .LVU115
+ 383 003c FFF7FEFF 		bl	rt_hw_interrupt_enable
+ 384              	.LVL31:
+ 323:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** }
+ 385              		.loc 1 323 1 is_stmt 0 view .LVU116
+ 386 0040 10BD     		pop	{r4, pc}
+ 387              	.LVL32:
+ 388              	.L22:
+ 389              		.loc 1 323 1 view .LVU117
+ 390 0042 00BF     		.align	2
+ 391              	.L21:
+ 392 0044 00000000 		.word	rt_thread_priority_table
+ 393 0048 00000000 		.word	rt_thread_ready_priority_group
+ 394              		.cfi_endproc
+ 395              	.LFE18:
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 15
+
+
+ 397              		.section	.text.rt_schedule_remove_thread,"ax",%progbits
+ 398              		.align	1
+ 399              		.global	rt_schedule_remove_thread
+ 400              		.syntax unified
+ 401              		.thumb
+ 402              		.thumb_func
+ 403              		.fpu softvfp
+ 405              	rt_schedule_remove_thread:
+ 406              	.LVL33:
+ 407              	.LFB19:
+ 324:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 325:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /*
+ 326:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * This function will remove a thread from system ready queue.
+ 327:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  *
+ 328:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * @param thread the thread to be removed
+ 329:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  *
+ 330:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * @note Please do not invoke this function in user application.
+ 331:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+ 332:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** void rt_schedule_remove_thread(struct rt_thread *thread)
+ 333:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** {
+ 408              		.loc 1 333 1 is_stmt 1 view -0
+ 409              		.cfi_startproc
+ 410              		@ args = 0, pretend = 0, frame = 0
+ 411              		@ frame_needed = 0, uses_anonymous_args = 0
+ 412              		.loc 1 333 1 is_stmt 0 view .LVU119
+ 413 0000 10B5     		push	{r4, lr}
+ 414              	.LCFI3:
+ 415              		.cfi_def_cfa_offset 8
+ 416              		.cfi_offset 4, -8
+ 417              		.cfi_offset 14, -4
+ 418 0002 0446     		mov	r4, r0
+ 334:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     register rt_base_t temp;
+ 419              		.loc 1 334 5 is_stmt 1 view .LVU120
+ 335:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 336:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     RT_ASSERT(thread != RT_NULL);
+ 420              		.loc 1 336 33 view .LVU121
+ 337:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 338:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* disable interrupt */
+ 339:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     temp = rt_hw_interrupt_disable();
+ 421              		.loc 1 339 5 view .LVU122
+ 422              		.loc 1 339 12 is_stmt 0 view .LVU123
+ 423 0004 FFF7FEFF 		bl	rt_hw_interrupt_disable
+ 424              	.LVL34:
+ 340:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 341:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #if RT_THREAD_PRIORITY_MAX <= 32
+ 342:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     RT_DEBUG_LOG(RT_DEBUG_SCHEDULER, ("remove thread[%.*s], the priority: %d\n",
+ 343:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                                       RT_NAME_MAX, thread->name,
+ 344:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                                       thread->current_priority));
+ 425              		.loc 1 344 65 is_stmt 1 view .LVU124
+ 345:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #else
+ 346:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     RT_DEBUG_LOG(RT_DEBUG_SCHEDULER,
+ 347:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                  ("remove thread[%.*s], the priority: %d 0x%x %d\n",
+ 348:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                   RT_NAME_MAX,
+ 349:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                   thread->name,
+ 350:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                   thread->number,
+ 351:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                   thread->number_mask,
+ 352:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****                   thread->high_mask));
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 16
+
+
+ 353:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 354:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 355:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* remove thread from ready list */
+ 356:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_list_remove(&(thread->tlist));
+ 426              		.loc 1 356 5 view .LVU125
+ 427 0008 04F11403 		add	r3, r4, #20
+ 428              	.LVL35:
+ 429              	.LBB20:
+ 430              	.LBI20:
+  80:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** }
+  81:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  82:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+  83:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @brief remove node from list.
+  84:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param n the node to remove from the list.
+  85:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  86:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** rt_inline void rt_list_remove(rt_list_t *n)
+ 431              		.loc 2 86 16 view .LVU126
+ 432              	.LBB21:
+  87:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+  88:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->next->prev = n->prev;
+ 433              		.loc 2 88 5 view .LVU127
+ 434              		.loc 2 88 6 is_stmt 0 view .LVU128
+ 435 000c 6169     		ldr	r1, [r4, #20]
+ 436              		.loc 2 88 22 view .LVU129
+ 437 000e A269     		ldr	r2, [r4, #24]
+ 438              		.loc 2 88 19 view .LVU130
+ 439 0010 4A60     		str	r2, [r1, #4]
+  89:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->prev->next = n->next;
+ 440              		.loc 2 89 5 is_stmt 1 view .LVU131
+ 441              		.loc 2 89 22 is_stmt 0 view .LVU132
+ 442 0012 6169     		ldr	r1, [r4, #20]
+ 443              		.loc 2 89 19 view .LVU133
+ 444 0014 1160     		str	r1, [r2]
+  90:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  91:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     n->next = n->prev = n;
+ 445              		.loc 2 91 5 is_stmt 1 view .LVU134
+ 446              		.loc 2 91 23 is_stmt 0 view .LVU135
+ 447 0016 A361     		str	r3, [r4, #24]
+ 448              		.loc 2 91 13 view .LVU136
+ 449 0018 6361     		str	r3, [r4, #20]
+ 450              	.LVL36:
+ 451              		.loc 2 91 13 view .LVU137
+ 452              	.LBE21:
+ 453              	.LBE20:
+ 357:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     if (rt_list_isempty(&(rt_thread_priority_table[thread->current_priority])))
+ 454              		.loc 1 357 5 is_stmt 1 view .LVU138
+ 455              		.loc 1 357 58 is_stmt 0 view .LVU139
+ 456 001a 94F83520 		ldrb	r2, [r4, #53]	@ zero_extendqisi2
+ 457              		.loc 1 357 25 view .LVU140
+ 458 001e 084B     		ldr	r3, .L27
+ 459 0020 03EBC201 		add	r1, r3, r2, lsl #3
+ 460              	.LVL37:
+ 461              	.LBB22:
+ 462              	.LBI22:
+  92:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** }
+  93:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** 
+  94:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** /**
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 17
+
+
+  95:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @brief tests whether a list is empty
+  96:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  * @param l the list to test.
+  97:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****  */
+  98:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** rt_inline int rt_list_isempty(const rt_list_t *l)
+ 463              		.loc 2 98 15 is_stmt 1 view .LVU141
+ 464              	.LBB23:
+  99:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h **** {
+ 100:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtservice.h ****     return l->next == l;
+ 465              		.loc 2 100 5 view .LVU142
+ 466              		.loc 2 100 13 is_stmt 0 view .LVU143
+ 467 0024 53F83230 		ldr	r3, [r3, r2, lsl #3]
+ 468              	.LVL38:
+ 469              		.loc 2 100 13 view .LVU144
+ 470              	.LBE23:
+ 471              	.LBE22:
+ 472              		.loc 1 357 8 view .LVU145
+ 473 0028 9942     		cmp	r1, r3
+ 474 002a 02D0     		beq	.L26
+ 475              	.L24:
+ 358:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     {
+ 359:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #if RT_THREAD_PRIORITY_MAX > 32
+ 360:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         rt_thread_ready_table[thread->number] &= ~thread->high_mask;
+ 361:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         if (rt_thread_ready_table[thread->number] == 0)
+ 362:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         {
+ 363:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             rt_thread_ready_priority_group &= ~thread->number_mask;
+ 364:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         }
+ 365:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #else
+ 366:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         rt_thread_ready_priority_group &= ~thread->number_mask;
+ 367:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 368:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     }
+ 369:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 370:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* enable interrupt */
+ 371:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_hw_interrupt_enable(temp);
+ 476              		.loc 1 371 5 is_stmt 1 view .LVU146
+ 477 002c FFF7FEFF 		bl	rt_hw_interrupt_enable
+ 478              	.LVL39:
+ 372:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** }
+ 479              		.loc 1 372 1 is_stmt 0 view .LVU147
+ 480 0030 10BD     		pop	{r4, pc}
+ 481              	.LVL40:
+ 482              	.L26:
+ 366:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 483              		.loc 1 366 9 is_stmt 1 view .LVU148
+ 366:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 484              		.loc 1 366 50 is_stmt 0 view .LVU149
+ 485 0032 A16B     		ldr	r1, [r4, #56]
+ 366:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** #endif
+ 486              		.loc 1 366 40 view .LVU150
+ 487 0034 034A     		ldr	r2, .L27+4
+ 488 0036 1368     		ldr	r3, [r2]
+ 489 0038 23EA0103 		bic	r3, r3, r1
+ 490 003c 1360     		str	r3, [r2]
+ 491 003e F5E7     		b	.L24
+ 492              	.L28:
+ 493              		.align	2
+ 494              	.L27:
+ 495 0040 00000000 		.word	rt_thread_priority_table
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 18
+
+
+ 496 0044 00000000 		.word	rt_thread_ready_priority_group
+ 497              		.cfi_endproc
+ 498              	.LFE19:
+ 500              		.section	.text.rt_enter_critical,"ax",%progbits
+ 501              		.align	1
+ 502              		.global	rt_enter_critical
+ 503              		.syntax unified
+ 504              		.thumb
+ 505              		.thumb_func
+ 506              		.fpu softvfp
+ 508              	rt_enter_critical:
+ 509              	.LFB20:
+ 373:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 374:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**
+ 375:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * This function will lock the thread scheduler.
+ 376:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+ 377:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** void rt_enter_critical(void)
+ 378:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** {
+ 510              		.loc 1 378 1 is_stmt 1 view -0
+ 511              		.cfi_startproc
+ 512              		@ args = 0, pretend = 0, frame = 0
+ 513              		@ frame_needed = 0, uses_anonymous_args = 0
+ 514 0000 08B5     		push	{r3, lr}
+ 515              	.LCFI4:
+ 516              		.cfi_def_cfa_offset 8
+ 517              		.cfi_offset 3, -8
+ 518              		.cfi_offset 14, -4
+ 379:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     register rt_base_t level;
+ 519              		.loc 1 379 5 view .LVU152
+ 380:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 381:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* disable interrupt */
+ 382:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     level = rt_hw_interrupt_disable();
+ 520              		.loc 1 382 5 view .LVU153
+ 521              		.loc 1 382 13 is_stmt 0 view .LVU154
+ 522 0002 FFF7FEFF 		bl	rt_hw_interrupt_disable
+ 523              	.LVL41:
+ 383:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 384:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /*
+ 385:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****      * the maximal number of nest is RT_UINT16_MAX, which is big
+ 386:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****      * enough and does not check here
+ 387:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****      */
+ 388:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_scheduler_lock_nest ++;
+ 524              		.loc 1 388 5 is_stmt 1 view .LVU155
+ 525              		.loc 1 388 28 is_stmt 0 view .LVU156
+ 526 0006 034A     		ldr	r2, .L31
+ 527 0008 1388     		ldrh	r3, [r2]
+ 528 000a 0133     		adds	r3, r3, #1
+ 529 000c 1380     		strh	r3, [r2]	@ movhi
+ 389:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 390:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* enable interrupt */
+ 391:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_hw_interrupt_enable(level);
+ 530              		.loc 1 391 5 is_stmt 1 view .LVU157
+ 531 000e FFF7FEFF 		bl	rt_hw_interrupt_enable
+ 532              	.LVL42:
+ 392:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** }
+ 533              		.loc 1 392 1 is_stmt 0 view .LVU158
+ 534 0012 08BD     		pop	{r3, pc}
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 19
+
+
+ 535              	.L32:
+ 536              		.align	2
+ 537              	.L31:
+ 538 0014 00000000 		.word	.LANCHOR0
+ 539              		.cfi_endproc
+ 540              	.LFE20:
+ 542              		.section	.text.rt_exit_critical,"ax",%progbits
+ 543              		.align	1
+ 544              		.global	rt_exit_critical
+ 545              		.syntax unified
+ 546              		.thumb
+ 547              		.thumb_func
+ 548              		.fpu softvfp
+ 550              	rt_exit_critical:
+ 551              	.LFB21:
+ 393:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** RTM_EXPORT(rt_enter_critical);
+ 394:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 395:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**
+ 396:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * This function will unlock the thread scheduler.
+ 397:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+ 398:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** void rt_exit_critical(void)
+ 399:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** {
+ 552              		.loc 1 399 1 is_stmt 1 view -0
+ 553              		.cfi_startproc
+ 554              		@ args = 0, pretend = 0, frame = 0
+ 555              		@ frame_needed = 0, uses_anonymous_args = 0
+ 556 0000 08B5     		push	{r3, lr}
+ 557              	.LCFI5:
+ 558              		.cfi_def_cfa_offset 8
+ 559              		.cfi_offset 3, -8
+ 560              		.cfi_offset 14, -4
+ 400:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     register rt_base_t level;
+ 561              		.loc 1 400 5 view .LVU160
+ 401:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 402:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     /* disable interrupt */
+ 403:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     level = rt_hw_interrupt_disable();
+ 562              		.loc 1 403 5 view .LVU161
+ 563              		.loc 1 403 13 is_stmt 0 view .LVU162
+ 564 0002 FFF7FEFF 		bl	rt_hw_interrupt_disable
+ 565              	.LVL43:
+ 404:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 405:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     rt_scheduler_lock_nest --;
+ 566              		.loc 1 405 5 is_stmt 1 view .LVU163
+ 567              		.loc 1 405 28 is_stmt 0 view .LVU164
+ 568 0006 0B4A     		ldr	r2, .L38
+ 569 0008 1388     		ldrh	r3, [r2]
+ 570 000a 013B     		subs	r3, r3, #1
+ 571 000c 1BB2     		sxth	r3, r3
+ 572 000e 1380     		strh	r3, [r2]	@ movhi
+ 406:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     if (rt_scheduler_lock_nest <= 0)
+ 573              		.loc 1 406 5 is_stmt 1 view .LVU165
+ 574              		.loc 1 406 8 is_stmt 0 view .LVU166
+ 575 0010 002B     		cmp	r3, #0
+ 576 0012 02DD     		ble	.L37
+ 407:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     {
+ 408:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         rt_scheduler_lock_nest = 0;
+ 409:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         /* enable interrupt */
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 20
+
+
+ 410:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         rt_hw_interrupt_enable(level);
+ 411:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 412:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         if (rt_current_thread)
+ 413:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         {
+ 414:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             /* if scheduler is started, do a schedule */
+ 415:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****             rt_schedule();
+ 416:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         }
+ 417:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     }
+ 418:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     else
+ 419:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     {
+ 420:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         /* enable interrupt */
+ 421:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         rt_hw_interrupt_enable(level);
+ 577              		.loc 1 421 9 is_stmt 1 view .LVU167
+ 578 0014 FFF7FEFF 		bl	rt_hw_interrupt_enable
+ 579              	.LVL44:
+ 580              	.L33:
+ 422:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     }
+ 423:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** }
+ 581              		.loc 1 423 1 is_stmt 0 view .LVU168
+ 582 0018 08BD     		pop	{r3, pc}
+ 583              	.LVL45:
+ 584              	.L37:
+ 408:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         /* enable interrupt */
+ 585              		.loc 1 408 9 is_stmt 1 view .LVU169
+ 408:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         /* enable interrupt */
+ 586              		.loc 1 408 32 is_stmt 0 view .LVU170
+ 587 001a 1346     		mov	r3, r2
+ 588 001c 0022     		movs	r2, #0
+ 589 001e 1A80     		strh	r2, [r3]	@ movhi
+ 410:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 590              		.loc 1 410 9 is_stmt 1 view .LVU171
+ 591 0020 FFF7FEFF 		bl	rt_hw_interrupt_enable
+ 592              	.LVL46:
+ 412:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         {
+ 593              		.loc 1 412 9 view .LVU172
+ 412:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         {
+ 594              		.loc 1 412 13 is_stmt 0 view .LVU173
+ 595 0024 044B     		ldr	r3, .L38+4
+ 596 0026 1B68     		ldr	r3, [r3]
+ 412:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         {
+ 597              		.loc 1 412 12 view .LVU174
+ 598 0028 002B     		cmp	r3, #0
+ 599 002a F5D0     		beq	.L33
+ 415:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****         }
+ 600              		.loc 1 415 13 is_stmt 1 view .LVU175
+ 601 002c FFF7FEFF 		bl	rt_schedule
+ 602              	.LVL47:
+ 603 0030 F2E7     		b	.L33
+ 604              	.L39:
+ 605 0032 00BF     		.align	2
+ 606              	.L38:
+ 607 0034 00000000 		.word	.LANCHOR0
+ 608 0038 00000000 		.word	rt_current_thread
+ 609              		.cfi_endproc
+ 610              	.LFE21:
+ 612              		.section	.text.rt_critical_level,"ax",%progbits
+ 613              		.align	1
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 21
+
+
+ 614              		.global	rt_critical_level
+ 615              		.syntax unified
+ 616              		.thumb
+ 617              		.thumb_func
+ 618              		.fpu softvfp
+ 620              	rt_critical_level:
+ 621              	.LFB22:
+ 424:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** RTM_EXPORT(rt_exit_critical);
+ 425:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** 
+ 426:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** /**
+ 427:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * Get the scheduler lock level
+ 428:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  *
+ 429:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  * @return the level of the scheduler lock. 0 means unlocked.
+ 430:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****  */
+ 431:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** rt_uint16_t rt_critical_level(void)
+ 432:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** {
+ 622              		.loc 1 432 1 view -0
+ 623              		.cfi_startproc
+ 624              		@ args = 0, pretend = 0, frame = 0
+ 625              		@ frame_needed = 0, uses_anonymous_args = 0
+ 626              		@ link register save eliminated.
+ 433:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c ****     return rt_scheduler_lock_nest;
+ 627              		.loc 1 433 5 view .LVU177
+ 434:Middlewares/Third_Party/RealThread_RTOS_RT-Thread/src/scheduler.c **** }
+ 628              		.loc 1 434 1 is_stmt 0 view .LVU178
+ 629 0000 014B     		ldr	r3, .L41
+ 630 0002 1888     		ldrh	r0, [r3]
+ 631 0004 7047     		bx	lr
+ 632              	.L42:
+ 633 0006 00BF     		.align	2
+ 634              	.L41:
+ 635 0008 00000000 		.word	.LANCHOR0
+ 636              		.cfi_endproc
+ 637              	.LFE22:
+ 639              		.comm	rt_thread_defunct,8,4
+ 640              		.comm	rt_thread_ready_priority_group,4,4
+ 641              		.comm	rt_current_priority,1,1
+ 642              		.comm	rt_current_thread,4,4
+ 643              		.comm	rt_thread_priority_table,256,4
+ 644              		.section	.bss.rt_scheduler_lock_nest,"aw",%nobits
+ 645              		.align	1
+ 646              		.set	.LANCHOR0,. + 0
+ 649              	rt_scheduler_lock_nest:
+ 650 0000 0000     		.space	2
+ 651              		.text
+ 652              	.Letext0:
+ 653              		.file 3 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtdef.h"
+ 654              		.file 4 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/finsh_api.h"
+ 655              		.file 5 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rthw.h"
+ 656              		.file 6 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtthread.h"
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s 			page 22
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 scheduler.c
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:16     .text.rt_system_scheduler_init:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:24     .text.rt_system_scheduler_init:00000000 rt_system_scheduler_init
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:108    .text.rt_system_scheduler_init:00000034 $d
+                            *COM*:00000100 rt_thread_priority_table
+                            *COM*:00000001 rt_current_priority
+                            *COM*:00000004 rt_current_thread
+                            *COM*:00000004 rt_thread_ready_priority_group
+                            *COM*:00000008 rt_thread_defunct
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:118    .text.rt_system_scheduler_start:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:125    .text.rt_system_scheduler_start:00000000 rt_system_scheduler_start
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:168    .text.rt_system_scheduler_start:00000024 $d
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:175    .text.rt_schedule:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:182    .text.rt_schedule:00000000 rt_schedule
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:294    .text.rt_schedule:0000005c $d
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:305    .text.rt_schedule_insert_thread:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:312    .text.rt_schedule_insert_thread:00000000 rt_schedule_insert_thread
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:392    .text.rt_schedule_insert_thread:00000044 $d
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:398    .text.rt_schedule_remove_thread:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:405    .text.rt_schedule_remove_thread:00000000 rt_schedule_remove_thread
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:495    .text.rt_schedule_remove_thread:00000040 $d
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:501    .text.rt_enter_critical:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:508    .text.rt_enter_critical:00000000 rt_enter_critical
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:538    .text.rt_enter_critical:00000014 $d
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:543    .text.rt_exit_critical:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:550    .text.rt_exit_critical:00000000 rt_exit_critical
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:607    .text.rt_exit_critical:00000034 $d
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:613    .text.rt_critical_level:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:620    .text.rt_critical_level:00000000 rt_critical_level
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:635    .text.rt_critical_level:00000008 $d
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:645    .bss.rt_scheduler_lock_nest:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\ccKzfKhR.s:649    .bss.rt_scheduler_lock_nest:00000000 rt_scheduler_lock_nest
+
+UNDEFINED SYMBOLS
+__rt_ffs
+rt_hw_context_switch_to
+rt_hw_interrupt_disable
+rt_hw_context_switch_interrupt
+rt_hw_interrupt_enable
+rt_hw_context_switch
+rt_interrupt_nest

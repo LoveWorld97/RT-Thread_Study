@@ -1,0 +1,22 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Cortex-Debug", //调试入口显示的名字，随便起
+            "cwd": "${workspaceRoot}", //工作目录，根路径
+            "executable": "${workspaceFolder}/build/${workspaceRootFolderName}.elf", //调试文件
+            "request": "launch",
+            "runToMain": true,
+            "type": "cortex-debug", //配置为使用插件调试
+            "servertype": "openocd", //映射openocd
+            "configFiles": [
+                "${workspaceRoot}/openocd.cfg"
+            ], //openocd配置
+            "preLaunchTask": "Update", //启动前执行的任务，对应待会要配置的task文件里的标签
+            "postDebugTask": "Reset" //同上，调试结束执行的任务
+        }
+    ]
+}

@@ -1,0 +1,616 @@
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 1
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"producer_consumer.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.section	.rodata.producer_thread_entry.str1.4,"aMS",%progbits,1
+  16              		.align	2
+  17              	.LC0:
+  18 0000 74686520 		.ascii	"the producer generates a number: %d\012\000"
+  18      70726F64 
+  18      75636572 
+  18      2067656E 
+  18      65726174 
+  19 0025 000000   		.align	2
+  20              	.LC1:
+  21 0028 74686520 		.ascii	"the producer exit!\012\000"
+  21      70726F64 
+  21      75636572 
+  21      20657869 
+  21      74210A00 
+  22              		.section	.text.producer_thread_entry,"ax",%progbits
+  23              		.align	1
+  24              		.global	producer_thread_entry
+  25              		.arch armv7-m
+  26              		.syntax unified
+  27              		.thumb
+  28              		.thumb_func
+  29              		.fpu softvfp
+  31              	producer_thread_entry:
+  32              	.LVL0:
+  33              	.LFB15:
+  34              		.file 1 "Core/thread_sample/producer_consumer.c"
+   1:Core/thread_sample/producer_consumer.c **** #include "rtthread.h"
+   2:Core/thread_sample/producer_consumer.c **** 
+   3:Core/thread_sample/producer_consumer.c **** #define THREAD_PRIORITY 6
+   4:Core/thread_sample/producer_consumer.c **** #define THREAD_STACK_SIZE 512
+   5:Core/thread_sample/producer_consumer.c **** #define THREAD_TIMESLICE 5
+   6:Core/thread_sample/producer_consumer.c **** 
+   7:Core/thread_sample/producer_consumer.c **** /* 定义最大 5 个元素能够被产生 */
+   8:Core/thread_sample/producer_consumer.c **** #define MAXSEM 5
+   9:Core/thread_sample/producer_consumer.c **** /* 用于放置生产的整数数组 */
+  10:Core/thread_sample/producer_consumer.c **** rt_uint32_t array[MAXSEM];
+  11:Core/thread_sample/producer_consumer.c **** /* 指向生产者、消费者在 array 数组中的读写位置 */
+  12:Core/thread_sample/producer_consumer.c **** static rt_uint32_t set, get;
+  13:Core/thread_sample/producer_consumer.c **** 
+  14:Core/thread_sample/producer_consumer.c **** /* 指向线程控制块的指针 */
+  15:Core/thread_sample/producer_consumer.c **** static rt_thread_t producer_tid = RT_NULL;
+  16:Core/thread_sample/producer_consumer.c **** static rt_thread_t consumer_tid = RT_NULL;
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s 			page 2
+
+
+  17:Core/thread_sample/producer_consumer.c **** 
+  18:Core/thread_sample/producer_consumer.c **** struct rt_semaphore sem_lock;
+  19:Core/thread_sample/producer_consumer.c **** struct rt_semaphore sem_empty, sem_full;
+  20:Core/thread_sample/producer_consumer.c **** 
+  21:Core/thread_sample/producer_consumer.c **** /* 生产者线程入口 */
+  22:Core/thread_sample/producer_consumer.c **** void producer_thread_entry(void *parameter)
+  23:Core/thread_sample/producer_consumer.c **** {
+  35              		.loc 1 23 1 view -0
+  36              		.cfi_startproc
+  37              		@ args = 0, pretend = 0, frame = 0
+  38              		@ frame_needed = 0, uses_anonymous_args = 0
+  39              		.loc 1 23 1 is_stmt 0 view .LVU1
+  40 0000 70B5     		push	{r4, r5, r6, lr}
+  41              	.LCFI0:
+  42              		.cfi_def_cfa_offset 16
+  43              		.cfi_offset 4, -16
+  44              		.cfi_offset 5, -12
+  45              		.cfi_offset 6, -8
+  46              		.cfi_offset 14, -4
+  24:Core/thread_sample/producer_consumer.c ****     int cnt = 0;
+  47              		.loc 1 24 5 is_stmt 1 view .LVU2
+  48              	.LVL1:
+  25:Core/thread_sample/producer_consumer.c ****     /* 运行 10 次 */
+  26:Core/thread_sample/producer_consumer.c ****     while (cnt < 10)
+  49              		.loc 1 26 5 view .LVU3
+  24:Core/thread_sample/producer_consumer.c ****     int cnt = 0;
+  50              		.loc 1 24 9 is_stmt 0 view .LVU4
+  51 0002 0024     		movs	r4, #0
+  52              	.LVL2:
+  53              	.L2:
+  54              		.loc 1 26 11 is_stmt 1 view .LVU5
+  55 0004 092C     		cmp	r4, #9
+  56 0006 29DC     		bgt	.L5
+  27:Core/thread_sample/producer_consumer.c ****     {
+  28:Core/thread_sample/producer_consumer.c ****         /* 获取一个空位 */
+  29:Core/thread_sample/producer_consumer.c ****         rt_sem_take(&sem_empty, RT_WAITING_FOREVER);
+  57              		.loc 1 29 9 view .LVU6
+  58 0008 4FF0FF31 		mov	r1, #-1
+  59 000c 1548     		ldr	r0, .L6
+  60 000e FFF7FEFF 		bl	rt_sem_take
+  61              	.LVL3:
+  30:Core/thread_sample/producer_consumer.c ****         /* 修改 array 内容，上锁 */
+  31:Core/thread_sample/producer_consumer.c ****         rt_sem_take(&sem_lock, RT_WAITING_FOREVER);
+  62              		.loc 1 31 9 view .LVU7
+  63 0012 154E     		ldr	r6, .L6+4
+  64 0014 4FF0FF31 		mov	r1, #-1
+  65 0018 3046     		mov	r0, r6
+  66 001a FFF7FEFF 		bl	rt_sem_take
+  67              	.LVL4:
+  32:Core/thread_sample/producer_consumer.c ****         array[set % MAXSEM] = cnt + 1;
+  68              		.loc 1 32 9 view .LVU8
+  69              		.loc 1 32 35 is_stmt 0 view .LVU9
+  70 001e 0134     		adds	r4, r4, #1
+  71              	.LVL5:
+  72              		.loc 1 32 19 view .LVU10
+  73 0020 124D     		ldr	r5, .L6+8
+  74 0022 2B68     		ldr	r3, [r5]
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s 			page 3
+
+
+  75 0024 124A     		ldr	r2, .L6+12
+  76 0026 A2FB0312 		umull	r1, r2, r2, r3
+  77 002a 22F00301 		bic	r1, r2, #3
+  78 002e 01EB9202 		add	r2, r1, r2, lsr #2
+  79 0032 9B1A     		subs	r3, r3, r2
+  80              		.loc 1 32 29 view .LVU11
+  81 0034 0F4A     		ldr	r2, .L6+16
+  82 0036 42F82340 		str	r4, [r2, r3, lsl #2]
+  33:Core/thread_sample/producer_consumer.c ****         rt_kprintf("the producer generates a number: %d\n", array[set % MAXSEM]);
+  83              		.loc 1 33 9 is_stmt 1 view .LVU12
+  84 003a 2146     		mov	r1, r4
+  85 003c 0E48     		ldr	r0, .L6+20
+  86 003e FFF7FEFF 		bl	rt_kprintf
+  87              	.LVL6:
+  34:Core/thread_sample/producer_consumer.c ****         set++;
+  88              		.loc 1 34 9 view .LVU13
+  89              		.loc 1 34 12 is_stmt 0 view .LVU14
+  90 0042 2B68     		ldr	r3, [r5]
+  91 0044 0133     		adds	r3, r3, #1
+  92 0046 2B60     		str	r3, [r5]
+  35:Core/thread_sample/producer_consumer.c ****         rt_sem_release(&sem_lock);
+  93              		.loc 1 35 9 is_stmt 1 view .LVU15
+  94 0048 3046     		mov	r0, r6
+  95 004a FFF7FEFF 		bl	rt_sem_release
+  96              	.LVL7:
+  36:Core/thread_sample/producer_consumer.c ****         /* 发布一个满位 */
+  37:Core/thread_sample/producer_consumer.c ****         rt_sem_release(&sem_full);
+  97              		.loc 1 37 9 view .LVU16
+  98 004e 0B48     		ldr	r0, .L6+24
+  99 0050 FFF7FEFF 		bl	rt_sem_release
+ 100              	.LVL8:
+  38:Core/thread_sample/producer_consumer.c ****         cnt++;
+ 101              		.loc 1 38 9 view .LVU17
+  39:Core/thread_sample/producer_consumer.c ****         /* 暂停一段时间 */
+  40:Core/thread_sample/producer_consumer.c ****         rt_thread_mdelay(20);
+ 102              		.loc 1 40 9 view .LVU18
+ 103 0054 1420     		movs	r0, #20
+ 104 0056 FFF7FEFF 		bl	rt_thread_mdelay
+ 105              	.LVL9:
+ 106 005a D3E7     		b	.L2
+ 107              	.L5:
+  41:Core/thread_sample/producer_consumer.c ****     }
+  42:Core/thread_sample/producer_consumer.c ****     rt_kprintf("the producer exit!\n");
+ 108              		.loc 1 42 5 view .LVU19
+ 109 005c 0848     		ldr	r0, .L6+28
+ 110 005e FFF7FEFF 		bl	rt_kprintf
+ 111              	.LVL10:
+  43:Core/thread_sample/producer_consumer.c **** }
+ 112              		.loc 1 43 1 is_stmt 0 view .LVU20
+ 113 0062 70BD     		pop	{r4, r5, r6, pc}
+ 114              	.LVL11:
+ 115              	.L7:
+ 116              		.loc 1 43 1 view .LVU21
+ 117              		.align	2
+ 118              	.L6:
+ 119 0064 00000000 		.word	sem_empty
+ 120 0068 00000000 		.word	sem_lock
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s 			page 4
+
+
+ 121 006c 00000000 		.word	.LANCHOR0
+ 122 0070 CDCCCCCC 		.word	-858993459
+ 123 0074 00000000 		.word	array
+ 124 0078 00000000 		.word	.LC0
+ 125 007c 00000000 		.word	sem_full
+ 126 0080 28000000 		.word	.LC1
+ 127              		.cfi_endproc
+ 128              	.LFE15:
+ 130              		.section	.rodata.consumer_thread_entry.str1.4,"aMS",%progbits,1
+ 131              		.align	2
+ 132              	.LC2:
+ 133 0000 74686520 		.ascii	"the consumer[%d] get a number: %d\012\000"
+ 133      636F6E73 
+ 133      756D6572 
+ 133      5B25645D 
+ 133      20676574 
+ 134 0023 00       		.align	2
+ 135              	.LC3:
+ 136 0024 74686520 		.ascii	"the consumer sum is: %d\012\000"
+ 136      636F6E73 
+ 136      756D6572 
+ 136      2073756D 
+ 136      2069733A 
+ 137 003d 000000   		.align	2
+ 138              	.LC4:
+ 139 0040 74686520 		.ascii	"the consumer exit!\012\000"
+ 139      636F6E73 
+ 139      756D6572 
+ 139      20657869 
+ 139      74210A00 
+ 140              		.section	.text.consumer_thread_entry,"ax",%progbits
+ 141              		.align	1
+ 142              		.global	consumer_thread_entry
+ 143              		.syntax unified
+ 144              		.thumb
+ 145              		.thumb_func
+ 146              		.fpu softvfp
+ 148              	consumer_thread_entry:
+ 149              	.LVL12:
+ 150              	.LFB16:
+  44:Core/thread_sample/producer_consumer.c **** 
+  45:Core/thread_sample/producer_consumer.c **** /* 消费者线程入口 */
+  46:Core/thread_sample/producer_consumer.c **** void consumer_thread_entry(void *parameter)
+  47:Core/thread_sample/producer_consumer.c **** {
+ 151              		.loc 1 47 1 is_stmt 1 view -0
+ 152              		.cfi_startproc
+ 153              		@ args = 0, pretend = 0, frame = 0
+ 154              		@ frame_needed = 0, uses_anonymous_args = 0
+ 155              		.loc 1 47 1 is_stmt 0 view .LVU23
+ 156 0000 70B5     		push	{r4, r5, r6, lr}
+ 157              	.LCFI1:
+ 158              		.cfi_def_cfa_offset 16
+ 159              		.cfi_offset 4, -16
+ 160              		.cfi_offset 5, -12
+ 161              		.cfi_offset 6, -8
+ 162              		.cfi_offset 14, -4
+  48:Core/thread_sample/producer_consumer.c ****     rt_uint32_t sum = 0;
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s 			page 5
+
+
+ 163              		.loc 1 48 5 is_stmt 1 view .LVU24
+ 164              	.LVL13:
+ 165              		.loc 1 48 17 is_stmt 0 view .LVU25
+ 166 0002 0026     		movs	r6, #0
+ 167              	.LVL14:
+ 168              	.L10:
+  49:Core/thread_sample/producer_consumer.c ****     while (1)
+ 169              		.loc 1 49 5 is_stmt 1 view .LVU26
+  50:Core/thread_sample/producer_consumer.c ****     {
+  51:Core/thread_sample/producer_consumer.c ****         /* 获取一个满位 */
+  52:Core/thread_sample/producer_consumer.c ****         rt_sem_take(&sem_full, RT_WAITING_FOREVER);
+ 170              		.loc 1 52 9 view .LVU27
+ 171 0004 4FF0FF31 		mov	r1, #-1
+ 172 0008 1848     		ldr	r0, .L12
+ 173 000a FFF7FEFF 		bl	rt_sem_take
+ 174              	.LVL15:
+  53:Core/thread_sample/producer_consumer.c ****         /* 临界区，上锁进行操作 */
+  54:Core/thread_sample/producer_consumer.c ****         rt_sem_take(&sem_lock, RT_WAITING_FOREVER);
+ 175              		.loc 1 54 9 view .LVU28
+ 176 000e 184D     		ldr	r5, .L12+4
+ 177 0010 4FF0FF31 		mov	r1, #-1
+ 178 0014 2846     		mov	r0, r5
+ 179 0016 FFF7FEFF 		bl	rt_sem_take
+ 180              	.LVL16:
+  55:Core/thread_sample/producer_consumer.c ****         sum += array[get % MAXSEM];
+ 181              		.loc 1 55 9 view .LVU29
+ 182              		.loc 1 55 26 is_stmt 0 view .LVU30
+ 183 001a 164C     		ldr	r4, .L12+8
+ 184 001c 2168     		ldr	r1, [r4]
+ 185 001e 164B     		ldr	r3, .L12+12
+ 186 0020 A3FB0123 		umull	r2, r3, r3, r1
+ 187 0024 23F00302 		bic	r2, r3, #3
+ 188 0028 02EB9303 		add	r3, r2, r3, lsr #2
+ 189 002c C91A     		subs	r1, r1, r3
+ 190              		.loc 1 55 21 view .LVU31
+ 191 002e 134B     		ldr	r3, .L12+16
+ 192 0030 53F82120 		ldr	r2, [r3, r1, lsl #2]
+ 193              		.loc 1 55 13 view .LVU32
+ 194 0034 1644     		add	r6, r6, r2
+ 195              	.LVL17:
+  56:Core/thread_sample/producer_consumer.c ****         rt_kprintf("the consumer[%d] get a number: %d\n", (get % MAXSEM), array[get % MAXSEM]);
+ 196              		.loc 1 56 9 is_stmt 1 view .LVU33
+ 197 0036 1248     		ldr	r0, .L12+20
+ 198 0038 FFF7FEFF 		bl	rt_kprintf
+ 199              	.LVL18:
+  57:Core/thread_sample/producer_consumer.c ****         get++;
+ 200              		.loc 1 57 9 view .LVU34
+ 201              		.loc 1 57 12 is_stmt 0 view .LVU35
+ 202 003c 2368     		ldr	r3, [r4]
+ 203 003e 0133     		adds	r3, r3, #1
+ 204 0040 2360     		str	r3, [r4]
+  58:Core/thread_sample/producer_consumer.c ****         rt_sem_release(&sem_lock);
+ 205              		.loc 1 58 9 is_stmt 1 view .LVU36
+ 206 0042 2846     		mov	r0, r5
+ 207 0044 FFF7FEFF 		bl	rt_sem_release
+ 208              	.LVL19:
+  59:Core/thread_sample/producer_consumer.c ****         /* 释放一个空位 */
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s 			page 6
+
+
+  60:Core/thread_sample/producer_consumer.c ****         rt_sem_release(&sem_empty);
+ 209              		.loc 1 60 9 view .LVU37
+ 210 0048 0E48     		ldr	r0, .L12+24
+ 211 004a FFF7FEFF 		bl	rt_sem_release
+ 212              	.LVL20:
+  61:Core/thread_sample/producer_consumer.c ****         /* 生产者生产到 10 个数目，停止，消费者线程相应停止 */
+  62:Core/thread_sample/producer_consumer.c ****         if (get == 10)
+ 213              		.loc 1 62 9 view .LVU38
+ 214              		.loc 1 62 17 is_stmt 0 view .LVU39
+ 215 004e 2368     		ldr	r3, [r4]
+ 216              		.loc 1 62 12 view .LVU40
+ 217 0050 0A2B     		cmp	r3, #10
+ 218 0052 03D0     		beq	.L9
+  63:Core/thread_sample/producer_consumer.c ****         {
+  64:Core/thread_sample/producer_consumer.c ****             break;
+  65:Core/thread_sample/producer_consumer.c ****         }
+  66:Core/thread_sample/producer_consumer.c ****         /* 暂停一小会时间 */
+  67:Core/thread_sample/producer_consumer.c ****         rt_thread_mdelay(50);
+ 219              		.loc 1 67 9 is_stmt 1 view .LVU41
+ 220 0054 3220     		movs	r0, #50
+ 221 0056 FFF7FEFF 		bl	rt_thread_mdelay
+ 222              	.LVL21:
+  49:Core/thread_sample/producer_consumer.c ****     {
+ 223              		.loc 1 49 11 view .LVU42
+  52:Core/thread_sample/producer_consumer.c ****         /* 临界区，上锁进行操作 */
+ 224              		.loc 1 52 9 is_stmt 0 view .LVU43
+ 225 005a D3E7     		b	.L10
+ 226              	.L9:
+  68:Core/thread_sample/producer_consumer.c ****     }
+  69:Core/thread_sample/producer_consumer.c ****     rt_kprintf("the consumer sum is: %d\n", sum);
+ 227              		.loc 1 69 5 is_stmt 1 view .LVU44
+ 228 005c 3146     		mov	r1, r6
+ 229 005e 0A48     		ldr	r0, .L12+28
+ 230 0060 FFF7FEFF 		bl	rt_kprintf
+ 231              	.LVL22:
+  70:Core/thread_sample/producer_consumer.c ****     rt_kprintf("the consumer exit!\n");
+ 232              		.loc 1 70 5 view .LVU45
+ 233 0064 0948     		ldr	r0, .L12+32
+ 234 0066 FFF7FEFF 		bl	rt_kprintf
+ 235              	.LVL23:
+  71:Core/thread_sample/producer_consumer.c **** }
+ 236              		.loc 1 71 1 is_stmt 0 view .LVU46
+ 237 006a 70BD     		pop	{r4, r5, r6, pc}
+ 238              	.LVL24:
+ 239              	.L13:
+ 240              		.loc 1 71 1 view .LVU47
+ 241              		.align	2
+ 242              	.L12:
+ 243 006c 00000000 		.word	sem_full
+ 244 0070 00000000 		.word	sem_lock
+ 245 0074 00000000 		.word	.LANCHOR1
+ 246 0078 CDCCCCCC 		.word	-858993459
+ 247 007c 00000000 		.word	array
+ 248 0080 00000000 		.word	.LC2
+ 249 0084 00000000 		.word	sem_empty
+ 250 0088 24000000 		.word	.LC3
+ 251 008c 40000000 		.word	.LC4
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s 			page 7
+
+
+ 252              		.cfi_endproc
+ 253              	.LFE16:
+ 255              		.section	.rodata.producer_consumer.str1.4,"aMS",%progbits,1
+ 256              		.align	2
+ 257              	.LC5:
+ 258 0000 6C6F636B 		.ascii	"lock\000"
+ 258      00
+ 259 0005 000000   		.align	2
+ 260              	.LC6:
+ 261 0008 656D7074 		.ascii	"empty\000"
+ 261      7900
+ 262 000e 0000     		.align	2
+ 263              	.LC7:
+ 264 0010 66756C6C 		.ascii	"full\000"
+ 264      00
+ 265 0015 000000   		.align	2
+ 266              	.LC8:
+ 267 0018 70726F64 		.ascii	"producer\000"
+ 267      75636572 
+ 267      00
+ 268 0021 000000   		.align	2
+ 269              	.LC9:
+ 270 0024 636F6E73 		.ascii	"consumer\000"
+ 270      756D6572 
+ 270      00
+ 271              		.section	.text.producer_consumer,"ax",%progbits
+ 272              		.align	1
+ 273              		.global	producer_consumer
+ 274              		.syntax unified
+ 275              		.thumb
+ 276              		.thumb_func
+ 277              		.fpu softvfp
+ 279              	producer_consumer:
+ 280              	.LFB17:
+  72:Core/thread_sample/producer_consumer.c **** 
+  73:Core/thread_sample/producer_consumer.c **** int producer_consumer(void)
+  74:Core/thread_sample/producer_consumer.c **** {
+ 281              		.loc 1 74 1 is_stmt 1 view -0
+ 282              		.cfi_startproc
+ 283              		@ args = 0, pretend = 0, frame = 0
+ 284              		@ frame_needed = 0, uses_anonymous_args = 0
+ 285 0000 10B5     		push	{r4, lr}
+ 286              	.LCFI2:
+ 287              		.cfi_def_cfa_offset 8
+ 288              		.cfi_offset 4, -8
+ 289              		.cfi_offset 14, -4
+ 290 0002 82B0     		sub	sp, sp, #8
+ 291              	.LCFI3:
+ 292              		.cfi_def_cfa_offset 16
+  75:Core/thread_sample/producer_consumer.c ****     set = 0;
+ 293              		.loc 1 75 5 view .LVU49
+ 294              		.loc 1 75 9 is_stmt 0 view .LVU50
+ 295 0004 0024     		movs	r4, #0
+ 296 0006 1A4B     		ldr	r3, .L18
+ 297 0008 1C60     		str	r4, [r3]
+  76:Core/thread_sample/producer_consumer.c ****     get = 0;
+ 298              		.loc 1 76 5 is_stmt 1 view .LVU51
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s 			page 8
+
+
+ 299              		.loc 1 76 9 is_stmt 0 view .LVU52
+ 300 000a 1A4B     		ldr	r3, .L18+4
+ 301 000c 1C60     		str	r4, [r3]
+  77:Core/thread_sample/producer_consumer.c ****     /* 初始化 3 个信号量 */
+  78:Core/thread_sample/producer_consumer.c ****     rt_sem_init(&sem_lock, "lock", 1, RT_IPC_FLAG_FIFO);
+ 302              		.loc 1 78 5 is_stmt 1 view .LVU53
+ 303 000e 2346     		mov	r3, r4
+ 304 0010 0122     		movs	r2, #1
+ 305 0012 1949     		ldr	r1, .L18+8
+ 306 0014 1948     		ldr	r0, .L18+12
+ 307 0016 FFF7FEFF 		bl	rt_sem_init
+ 308              	.LVL25:
+  79:Core/thread_sample/producer_consumer.c ****     rt_sem_init(&sem_empty, "empty", MAXSEM, RT_IPC_FLAG_FIFO);
+ 309              		.loc 1 79 5 view .LVU54
+ 310 001a 2346     		mov	r3, r4
+ 311 001c 0522     		movs	r2, #5
+ 312 001e 1849     		ldr	r1, .L18+16
+ 313 0020 1848     		ldr	r0, .L18+20
+ 314 0022 FFF7FEFF 		bl	rt_sem_init
+ 315              	.LVL26:
+  80:Core/thread_sample/producer_consumer.c ****     rt_sem_init(&sem_full, "full", 0, RT_IPC_FLAG_FIFO);
+ 316              		.loc 1 80 5 view .LVU55
+ 317 0026 2346     		mov	r3, r4
+ 318 0028 2246     		mov	r2, r4
+ 319 002a 1749     		ldr	r1, .L18+24
+ 320 002c 1748     		ldr	r0, .L18+28
+ 321 002e FFF7FEFF 		bl	rt_sem_init
+ 322              	.LVL27:
+  81:Core/thread_sample/producer_consumer.c **** 
+  82:Core/thread_sample/producer_consumer.c ****     /* 创建生产者线程 */
+  83:Core/thread_sample/producer_consumer.c ****     producer_tid = rt_thread_create("producer",
+ 323              		.loc 1 83 5 view .LVU56
+ 324              		.loc 1 83 20 is_stmt 0 view .LVU57
+ 325 0032 0523     		movs	r3, #5
+ 326 0034 0193     		str	r3, [sp, #4]
+ 327 0036 0093     		str	r3, [sp]
+ 328 0038 4FF40073 		mov	r3, #512
+ 329 003c 2246     		mov	r2, r4
+ 330 003e 1449     		ldr	r1, .L18+32
+ 331 0040 1448     		ldr	r0, .L18+36
+ 332 0042 FFF7FEFF 		bl	rt_thread_create
+ 333              	.LVL28:
+  84:Core/thread_sample/producer_consumer.c ****                                     producer_thread_entry,
+  85:Core/thread_sample/producer_consumer.c ****                                     RT_NULL,
+  86:Core/thread_sample/producer_consumer.c ****                                     THREAD_STACK_SIZE,
+  87:Core/thread_sample/producer_consumer.c ****                                     THREAD_PRIORITY - 1,
+  88:Core/thread_sample/producer_consumer.c ****                                     THREAD_TIMESLICE);
+  89:Core/thread_sample/producer_consumer.c ****     if (producer_tid != RT_NULL)
+ 334              		.loc 1 89 5 is_stmt 1 view .LVU58
+ 335              		.loc 1 89 8 is_stmt 0 view .LVU59
+ 336 0046 08B1     		cbz	r0, .L15
+  90:Core/thread_sample/producer_consumer.c ****     {
+  91:Core/thread_sample/producer_consumer.c ****         rt_thread_startup(producer_tid);
+ 337              		.loc 1 91 9 is_stmt 1 view .LVU60
+ 338 0048 FFF7FEFF 		bl	rt_thread_startup
+ 339              	.LVL29:
+ 340              	.L15:
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s 			page 9
+
+
+  92:Core/thread_sample/producer_consumer.c ****     }
+  93:Core/thread_sample/producer_consumer.c ****     /* 创建消费者线程 */
+  94:Core/thread_sample/producer_consumer.c ****     consumer_tid = rt_thread_create("consumer",
+ 341              		.loc 1 94 5 view .LVU61
+ 342              		.loc 1 94 20 is_stmt 0 view .LVU62
+ 343 004c 0523     		movs	r3, #5
+ 344 004e 0193     		str	r3, [sp, #4]
+ 345 0050 0723     		movs	r3, #7
+ 346 0052 0093     		str	r3, [sp]
+ 347 0054 4FF40073 		mov	r3, #512
+ 348 0058 0022     		movs	r2, #0
+ 349 005a 0F49     		ldr	r1, .L18+40
+ 350 005c 0F48     		ldr	r0, .L18+44
+ 351 005e FFF7FEFF 		bl	rt_thread_create
+ 352              	.LVL30:
+  95:Core/thread_sample/producer_consumer.c ****                                     consumer_thread_entry,
+  96:Core/thread_sample/producer_consumer.c ****                                     RT_NULL,
+  97:Core/thread_sample/producer_consumer.c ****                                     THREAD_STACK_SIZE,
+  98:Core/thread_sample/producer_consumer.c ****                                     THREAD_PRIORITY + 1,
+  99:Core/thread_sample/producer_consumer.c ****                                     THREAD_TIMESLICE);
+ 100:Core/thread_sample/producer_consumer.c ****     if (consumer_tid != RT_NULL)
+ 353              		.loc 1 100 5 is_stmt 1 view .LVU63
+ 354              		.loc 1 100 8 is_stmt 0 view .LVU64
+ 355 0062 08B1     		cbz	r0, .L16
+ 101:Core/thread_sample/producer_consumer.c ****     {
+ 102:Core/thread_sample/producer_consumer.c ****         rt_thread_startup(consumer_tid);
+ 356              		.loc 1 102 9 is_stmt 1 view .LVU65
+ 357 0064 FFF7FEFF 		bl	rt_thread_startup
+ 358              	.LVL31:
+ 359              	.L16:
+ 103:Core/thread_sample/producer_consumer.c ****     }
+ 104:Core/thread_sample/producer_consumer.c ****     return 0;
+ 360              		.loc 1 104 5 view .LVU66
+ 105:Core/thread_sample/producer_consumer.c **** }
+ 361              		.loc 1 105 1 is_stmt 0 view .LVU67
+ 362 0068 0020     		movs	r0, #0
+ 363 006a 02B0     		add	sp, sp, #8
+ 364              	.LCFI4:
+ 365              		.cfi_def_cfa_offset 8
+ 366              		@ sp needed
+ 367 006c 10BD     		pop	{r4, pc}
+ 368              	.L19:
+ 369 006e 00BF     		.align	2
+ 370              	.L18:
+ 371 0070 00000000 		.word	.LANCHOR0
+ 372 0074 00000000 		.word	.LANCHOR1
+ 373 0078 00000000 		.word	.LC5
+ 374 007c 00000000 		.word	sem_lock
+ 375 0080 08000000 		.word	.LC6
+ 376 0084 00000000 		.word	sem_empty
+ 377 0088 10000000 		.word	.LC7
+ 378 008c 00000000 		.word	sem_full
+ 379 0090 00000000 		.word	producer_thread_entry
+ 380 0094 18000000 		.word	.LC8
+ 381 0098 00000000 		.word	consumer_thread_entry
+ 382 009c 24000000 		.word	.LC9
+ 383              		.cfi_endproc
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s 			page 10
+
+
+ 384              	.LFE17:
+ 386              		.global	__fsym___cmd_producer_consumer
+ 387              		.global	__fsym___cmd_producer_consumer_name
+ 388              		.comm	sem_full,32,4
+ 389              		.comm	sem_empty,32,4
+ 390              		.comm	sem_lock,32,4
+ 391              		.comm	array,20,4
+ 392              		.section	.bss.get,"aw",%nobits
+ 393              		.align	2
+ 394              		.set	.LANCHOR1,. + 0
+ 397              	get:
+ 398 0000 00000000 		.space	4
+ 399              		.section	.bss.set,"aw",%nobits
+ 400              		.align	2
+ 401              		.set	.LANCHOR0,. + 0
+ 404              	set:
+ 405 0000 00000000 		.space	4
+ 406              		.section	.rodata.__fsym___cmd_producer_consumer_name,"a"
+ 407              		.align	2
+ 410              	__fsym___cmd_producer_consumer_name:
+ 411 0000 5F5F636D 		.ascii	"__cmd_producer_consumer\000"
+ 411      645F7072 
+ 411      6F647563 
+ 411      65725F63 
+ 411      6F6E7375 
+ 412              		.section	FSymTab,"a"
+ 413              		.align	2
+ 416              	__fsym___cmd_producer_consumer:
+ 417 0000 00000000 		.word	__fsym___cmd_producer_consumer_name
+ 418 0004 00000000 		.word	producer_consumer
+ 419              		.text
+ 420              	.Letext0:
+ 421              		.file 2 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtdef.h"
+ 422              		.file 3 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/components/finsh/finsh_api.h"
+ 423              		.file 4 "Middlewares/Third_Party/RealThread_RTOS_RT-Thread/include/rtthread.h"
+ARM GAS  C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s 			page 11
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 producer_consumer.c
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:16     .rodata.producer_thread_entry.str1.4:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:23     .text.producer_thread_entry:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:31     .text.producer_thread_entry:00000000 producer_thread_entry
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:119    .text.producer_thread_entry:00000064 $d
+                            *COM*:00000020 sem_empty
+                            *COM*:00000020 sem_lock
+                            *COM*:00000014 array
+                            *COM*:00000020 sem_full
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:131    .rodata.consumer_thread_entry.str1.4:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:141    .text.consumer_thread_entry:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:148    .text.consumer_thread_entry:00000000 consumer_thread_entry
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:243    .text.consumer_thread_entry:0000006c $d
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:256    .rodata.producer_consumer.str1.4:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:272    .text.producer_consumer:00000000 $t
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:279    .text.producer_consumer:00000000 producer_consumer
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:371    .text.producer_consumer:00000070 $d
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:416    FSymTab:00000000 __fsym___cmd_producer_consumer
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:410    .rodata.__fsym___cmd_producer_consumer_name:00000000 __fsym___cmd_producer_consumer_name
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:393    .bss.get:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:397    .bss.get:00000000 get
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:400    .bss.set:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:404    .bss.set:00000000 set
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:407    .rodata.__fsym___cmd_producer_consumer_name:00000000 $d
+C:\Users\GKQ\AppData\Local\Temp\cc4pPhEa.s:413    FSymTab:00000000 $d
+
+UNDEFINED SYMBOLS
+rt_sem_take
+rt_kprintf
+rt_sem_release
+rt_thread_mdelay
+rt_sem_init
+rt_thread_create
+rt_thread_startup
