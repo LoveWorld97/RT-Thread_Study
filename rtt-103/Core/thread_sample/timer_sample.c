@@ -44,6 +44,7 @@ int timer_sample(void)
     {
         rt_timer_start(timer2);
     }
+
 }
 
 /* 导出到 msh 命令列表中 */

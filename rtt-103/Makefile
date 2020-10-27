@@ -42,6 +42,12 @@ Core/Src/usart.c \
 Core/thread_sample/thread_sample.c \
 Core/thread_sample/threadslice_sample.c \
 Core/thread_sample/producer_consumer.c \
+Core/thread_sample/priority_inversion.c \
+Core/thread_sample/timer_sample.c \
+Core/thread_sample/event_sample.c \
+Core/thread_sample/mailbox_sample.c \
+Core/thread_sample/msgq_sample.c \
+Core/thread_sample/dynmem_sample.c \
 Core/Src/stm32f1xx_it.c \
 Core/Src/stm32f1xx_hal_msp.c \
 Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio_ex.c \
